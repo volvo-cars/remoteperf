@@ -1,0 +1,3 @@
+#!/bin/bash
+echo "Startup finished in 15.497s (kernel) + 8.579s (userspace) = 24.077s "
+echo "graphical.target reached after 8.538s in userspace"

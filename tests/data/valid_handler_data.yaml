@@ -1,0 +1,299 @@
+"/system/bin/bootstat -p | grep absolute_boot_time": |
+  absolute_boot_time	121
+
+systemd-analyze: |
+  Startup finished in 11.406s (kernel) + 11.725s (userspace) = 23.132s
+  graphical.target reached after 11.679s in userspace
+
+"cat /proc/stat | head -n 1 && sleep 0.3 && cat /proc/stat | head -n 1": |
+  cpu  1291056 2508 364484 13290545 7725 0 5683 0 0 0
+  cpu  1291057 2509 364485 13290546 7726 1 5684 1 1 1
+
+"cat /proc/meminfo":
+ - |
+  MemTotal:       32031624 kB
+  MemFree:        18189336 kB
+  MemAvailable:   24630432 kB
+  Buffers:          370796 kB
+  Cached:          7054992 kB
+  SwapCached:            0 kB
+  Active:          8099436 kB
+  Inactive:        4717660 kB
+  Active(anon):    6300312 kB
+  Inactive(anon):        0 kB
+  Active(file):    1799124 kB
+  Inactive(file):  4717660 kB
+  Unevictable:       92260 kB
+  Mlocked:              64 kB
+  SwapTotal:       2002940 kB
+  SwapFree:        2002940 kB
+  Zswap:                 0 kB
+  Zswapped:              0 kB
+  Dirty:               288 kB
+  Writeback:             0 kB
+  AnonPages:       5483632 kB
+  Mapped:          2015052 kB
+  Shmem:            909004 kB
+  KReclaimable:     391832 kB
+  Slab:             606872 kB
+  SReclaimable:     391832 kB
+  SUnreclaim:       215040 kB
+  KernelStack:       32768 kB
+  PageTables:        85128 kB
+  SecPageTables:         0 kB
+  NFS_Unstable:          0 kB
+  Bounce:                0 kB
+  WritebackTmp:          0 kB
+  CommitLimit:    18018752 kB
+  Committed_AS:   23733412 kB
+  VmallocTotal:   34359738367 kB
+  VmallocUsed:       75988 kB
+  VmallocChunk:          0 kB
+  Percpu:            16704 kB
+  HardwareCorrupted:     0 kB
+  AnonHugePages:         0 kB
+  ShmemHugePages:    81920 kB
+  ShmemPmdMapped:        0 kB
+  FileHugePages:         0 kB
+  FilePmdMapped:         0 kB
+  Unaccepted:            0 kB
+  HugePages_Total:       0
+  HugePages_Free:        0
+  HugePages_Rsvd:        0
+  HugePages_Surp:        0
+  Hugepagesize:       2048 kB
+  Hugetlb:               0 kB
+  DirectMap4k:      395932 kB
+  DirectMap2M:     8206336 kB
+  DirectMap1G:    25165824 kB
+ - |
+  MemTotal:       32031624 kB
+  MemFree:        18189334 kB
+  MemAvailable:   24630430 kB
+  Buffers:          370796 kB
+  Cached:          7054992 kB
+  SwapCached:            0 kB
+  Active:          8099436 kB
+  Inactive:        4717660 kB
+  Active(anon):    6300312 kB
+  Inactive(anon):        0 kB
+  Active(file):    1799124 kB
+  Inactive(file):  4717660 kB
+  Unevictable:       92260 kB
+  Mlocked:              64 kB
+  SwapTotal:       2002940 kB
+  SwapFree:        2002940 kB
+  Zswap:                 0 kB
+  Zswapped:              0 kB
+  Dirty:               288 kB
+  Writeback:             0 kB
+  AnonPages:       5483632 kB
+  Mapped:          2015052 kB
+  Shmem:            909004 kB
+  KReclaimable:     391832 kB
+  Slab:             606872 kB
+  SReclaimable:     391832 kB
+  SUnreclaim:       215040 kB
+  KernelStack:       32768 kB
+  PageTables:        85128 kB
+  SecPageTables:         0 kB
+  NFS_Unstable:          0 kB
+  Bounce:                0 kB
+  WritebackTmp:          0 kB
+  CommitLimit:    18018752 kB
+  Committed_AS:   23733412 kB
+  VmallocTotal:   34359738367 kB
+  VmallocUsed:       75988 kB
+  VmallocChunk:          0 kB
+  Percpu:            16704 kB
+  HardwareCorrupted:     0 kB
+  AnonHugePages:         0 kB
+  ShmemHugePages:    81920 kB
+  ShmemPmdMapped:        0 kB
+  FileHugePages:         0 kB
+  FilePmdMapped:         0 kB
+  Unaccepted:            0 kB
+  HugePages_Total:       0
+  HugePages_Free:        0
+  HugePages_Rsvd:        0
+  HugePages_Surp:        0
+  Hugepagesize:       2048 kB
+  Hugetlb:               0 kB
+  DirectMap4k:      395932 kB
+  DirectMap2M:     8206336 kB
+  DirectMap1G:    25165824 kB
+
+"pidin info": |
+  CPU:... BootTime:May 18 11:00:00 GMT 2024
+  Actual resident free memory:195Mb
+
+"date": |
+  Sat May 18 12:00:00 GMT 2024
+
+"cat /proc/stat | grep cpu":
+  - |
+    "cpu  1291056 2508 364484 13290545 7725 0 5683 0 0 0\n"
+    "cpu0  1291056 2508 364484 13290545 7725 0 5683 0 0 0\n"
+  - |
+    "cpu  1291057 2508 364484 13290644 7725 0 5683 0 0 0\n"
+    "cpu0  1291057 2508 364484 13290644 7725 0 5683 0 0 0\n"
+  - |
+    "cpu  1291059 2508 364484 13290742 7725 0 5683 0 0 0\n"
+    "cpu0  1291059 2508 364484 13290742 7725 0 5683 0 0 0\n"
+  - |
+    "cpu  1291062 2508 364484 13290839 7725 0 5683 0 0 0\n"
+    "cpu0  1291062 2508 364484 13290839 7725 0 5683 0 0 0\n"
+  - |
+    "cpu  1291066 2508 364484 13290935 7725 0 5683 0 0 0\n"
+    "cpu0  1291066 2508 364484 13290935 7725 0 5683 0 0 0\n"
+  - |
+    "cpu  1291071 2508 364484 13291030 7725 0 5683 0 0 0\n"
+    "cpu0  1291071 2508 364484 13291030 7725 0 5683 0 0 0\n"
+  - |
+    "cpu  1291077 2508 364484 13291124 7725 0 5683 0 0 0\n"
+    "cpu0  1291077 2508 364484 13291124 7725 0 5683 0 5683 0 0 0\n"
+  - |
+    "cpu  1291084 2508 364484 13291217 7725 0 5683 0 0 0\n"
+    "cpu0  1291084 2508 364484 13291217 7725 0 5683 0 0 0\n"
+  - |
+    "cpu  1291092 2508 364484 13291309 7725 0 5683 0 0 0\n"
+    "cpu0  1291092 2508 364484 13291309 7725 0 5683 0 0 0\n"
+  - |
+    "cpu  1291101 2508 364484 13291400 7725 0 5683 0 0 0\n"
+    "cpu0  1291101 2508 364484 13291400 7725 0 5683 0 0 0\n"
+  - |
+    "cpu  1291111 2508 364484 13291490 7725 0 5683 0 0 0\n"
+    "cpu0  1291111 2508 364484 13291490 7725 0 5683 0 0 0\n"
+  - |
+    "cpu  1291122 2508 364484 13291579 7725 0 5683 0 0 0\n"
+    "cpu0  1291122 2508 364484 13291579 7725 0 5683 0 0 0\n"
+  - |
+    "cpu  1291134 2508 364484 13291667 7725 0 5683 0 0 0\n"
+    "cpu0  1291134 2508 364484 13291667 7725 0 5683 0 0 0\n"
+  - |
+    "cpu  1291147 2508 364484 13291754 7725 0 5683 0 0 0\n"
+    "cpu0  1291147 2508 364484 13291754 7725 0 5683 0 0 0\n"
+  - |
+    "cpu  1291161 2508 364484 13291840 7725 0 5683 0 0 0\n"
+    "cpu0  1291161 2508 364484 13291840 7725 0 5683 0 0 0\n"
+  - |
+    "cpu  1291176 2508 364484 13291925 7725 0 5683 0 0 0\n"
+    "cpu0  1291176 2508 364484 13291925 7725 0 5683 0 0 0\n"
+  - |
+    "cpu  1291192 2508 364484 13292009 7725 0 5683 0 0 0\n"
+    "cpu0  1291192 2508 364484 13292009 7725 0 5683 0 0 0\n"
+  - |
+    "cpu  1291209 2508 364484 13292092 7725 0 5683 0 0 0\n"
+    "cpu0  1291209 2508 364484 13292092 7725 0 5683 0 0 0\n"
+  - |
+    "cpu  1291227 2508 364484 13292174 7725 0 5683 0 0 0\n"
+    "cpu0  1291227 2508 364484 13292174 7725 0 5683 0 0 0\n"
+  - |
+    "cpu  1291246 2508 364484 13292255 7725 0 5683 0 0 0\n"
+    "cpu0  1291246 2508 364484 13292255 7725 0 5683 0 0 0\n"
+
+
+
+"cat /dev/bmetrics*": 201 MARKER 785360128ns BOOT_LOADER_END
+
+'cat /proc/vm/stats | grep -E "(page_count|pages_free)"': |
+  getpage_count=123456
+  putpage_count=123
+  page_count=0x2ff700 (12.345GB)
+  pages_free=0xd9b0 (123.456MB)
+
+
+"cat /proc/uptime | cut -d ' ' -f 1":
+  - "10978.92\n"
+  - "10979.92\n"
+
+'getconf PAGESIZE && /bin/cat $(ls /proc | grep "[0-9]" | sed "s:\([0-9]*\):e39f7761903b /proc/\1/stat /proc/\1/cmdline:") e39f7761903b /proc/stat 2>&1': &proclist
+  - |
+    4096
+    cat: e39f7761903b: No such file or directory
+    1 (init) S 0 0 0 0 -1 1077936384 155616 3151452 466 1781 1315 8070 7213 10706 20 0 2 0 30 11125022720 1675 18446744073709551615 1 1 0 0 0 0 65536 0 1073779960 0 0 0 17 1 0 0 55 0 0 0 0 0 0 0 0 0 0
+    /system/bin/initsecond_stagecat: e39f7761903b: No such file or directory
+    10 (rcu_tasks_kthre) S 2 0 0 0 -1 2129984 0 0 0 0 0 1 0 0 20 0 1 0 30 0 0 18446744073709551615 0 0 0 0 0 0 0 2147483647 0 0 0 0 17 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    cat: e39f7761903b: No such file or directory
+    1005 (classifier@1.0-) S 1 1005 0 0 -1 1077936384 554 0 3 0 1 1 0 0 20 0 1 0 5762 11079892992 1079 18446744073709551615 1 1 0 0 0 0 0 0 1073775864 0 0 0 17 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    /vendor/bin/hw/android.hardware.input.classifier@1.0-service.defaultcat: e39f7761903b: No such file or directory
+    cpu  21100 73687 164367 2385459 1870 42012 4942 27053 0 0
+  - |
+    4096
+    cat: e39f7761903b: No such file or directory
+    1 (init) S 0 0 0 0 -1 1077936384 155616 3151452 466 1781 1315 8080 7213 10706 20 0 2 0 30 11125022720 1675 18446744073709551615 1 1 0 0 0 0 65536 0 1073779960 0 0 0 17 1 0 0 55 0 0 0 0 0 0 0 0 0 0
+    /system/bin/initsecond_stagecat: e39f7761903b: No such file or directory
+    10 (rcu_tasks_kthre) S 2 0 0 0 -1 2129984 0 0 0 0 0 2 0 0 20 0 1 0 30 0 2000 18446744073709551615 0 0 0 0 0 0 0 2147483647 0 0 0 0 17 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    cat: e39f7761903b: No such file or directory
+    1005 (classifier@1.0-) S 1 1005 0 0 -1 1077936384 554 0 3 0 1 1 0 0 20 0 1 0 5762 11079892992 1079 18446744073709551615 1 1 0 0 0 0 0 0 1073775864 0 0 0 17 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    /vendor/bin/hw/android.hardware.input.classifier@1.0-service.defaultcat: e39f7761903b: No such file or directory
+    cpu  21200 73687 164367 2385459 1870 42012 4942 27053 0 0
+  - |
+    4096
+    cat: e39f7761903b: No such file or directory
+    1 (init) S 0 0 0 0 -1 1077936384 155616 3151452 466 1781 1315 8091 7213 10706 20 0 2 0 30 11125022720 1675 18446744073709551615 1 1 0 0 0 0 65536 0 1073779960 0 0 0 17 1 0 0 55 0 0 0 0 0 0 0 0 0 0
+    /system/bin/initsecond_stagecat: e39f7761903b: No such file or directory
+    10 (rcu_tasks_kthre) S 2 0 0 0 -1 2129984 0 0 0 0 0 3 0 0 20 0 1 0 30 0 0 18446744073709551615 0 0 0 0 0 0 0 2147483647 0 0 0 0 17 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    cat: e39f7761903b: No such file or directory
+    1005 (classifier@1.0-) S 1 1005 0 0 -1 1077936384 554 0 3 0 1 1 0 0 20 0 1 0 5762 11079892992 1079 18446744073709551615 1 1 0 0 0 0 0 0 1073775864 0 0 0 17 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    /vendor/bin/hw/android.hardware.input.classifier@1.0-service.defaultcat: e39f7761903b: No such file or directory
+    cpu  21300 73687 164367 2385459 1870 42012 4942 27053 0 0
+  - |
+    4096
+    cat: e39f7761903b: No such file or directory
+    1 (init) S 0 0 0 0 -1 1077936384 155616 3151452 466 1781 1315 8103 7213 10706 20 0 2 0 30 11125022720 1675 18446744073709551615 1 1 0 0 0 0 65536 0 1073779960 0 0 0 17 1 0 0 55 0 0 0 0 0 0 0 0 0 0
+    /system/bin/initsecond_stagecat: e39f7761903b: No such file or directory
+    10 (rcu_tasks_kthre) S 2 0 0 0 -1 2129984 0 0 0 0 0 20 0 0 20 0 1 0 30 0 0 18446744073709551615 0 0 0 0 0 0 0 2147483647 0 0 0 0 17 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    cat: e39f7761903b: No such file or directory
+    1005 (classifier@1.0-) S 1 1005 0 0 -1 1077936384 554 0 3 0 1 1 0 0 20 0 1 0 5762 11079892992 1079 18446744073709551615 1 1 0 0 0 0 0 0 1073775864 0 0 0 17 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    /vendor/bin/hw/android.hardware.input.classifier@1.0-service.defaultcat: e39f7761903b: No such file or directory
+    cpu  21400 73687 164367 2385459 1870 42012 4942 27053 0 0
+
+"cat /tmp/remoteperf_delayed_hogs*": |
+    PID           NAME  MSEC PIDS  SYS       MEMORY
+    54321           bash     1   0%   0%    902k   0%
+    12345        python3     1   0%   0%    210k   0%
+      789          messageservice     1   0%   0%   5716k   0%
+      456        musicplayer     2   0%   0%    796k   0%
+      123           code    78   1%   7%   2952k   0%
+        1           init   420   7%  42%     N/A  N/A
+        0         [idle]   750  12%  75%      0k   0%
+        1         [idle]   807   1%  80%      0k   0%
+        2         [idle]   879  14%  87%      0k   0%
+        3         [idle]   674  11%  67%      0k   0%
+        4         [idle]   734   9%  73%      0k   0%
+        5         [idle]   768  12%  76%      0k   0%
+      pid  start time  name Arguments
+        1 Oct 04 05:27 sbin/init  /sbin/init splash
+      123 Oct 04 05:27 usr/share/code/code  /usr/share/code/code --type=utility --utility-sub-type=node.mojom.NodeService --lang=en-US
+      456 Oct 04 05:27 usr/share/musicplayer/musicplayer  /usr/share/musicplayer/musicplayer --type=gpu-process --no-sandbox --enable-crash-reporter=, --change-stack-guard-on-fork=enable
+      789 Oct 04 05:27 usr/lib/messageservice/messageservice  /usr/lib/messageservice/messageservice --type=utility --utility-sub-type=audio.mojom.AudioService --lang=en-US
+    12345 Oct 04 05:27 bin/usr/bin/python3 /bin/usr/bin/python3 /usr/bin/landscape-monitor--ignore-sigint
+    54321 Oct 04 05:27 bin/bash  bash
+
+"command -v *": "something"
+
+'[ -e "/dev/bmetrics" ] && echo "True" || echo "False"': "True"
+
+"ps -p 1 -o comm=": "systemd"
+
+"(cat $*": |
+  rss_pid=1: No such file or directory
+  as_stats.rss=0x7f986 (12.34MB)
+  rss_pid=123: No such file or directory
+  as_stats.rss=0x692 (6.500MB)
+  rss_pid=456: No such file or directory
+  as_stats.rss=0xf3 (400.000kB)
+  rss_pid=789: No such file or directory
+  as_stats.rss=0x1cb (2.701MB)
+  rss_pid=12345: No such file or directory
+  as_stats.rss=0x542 (7.234MB)
+  rss_pid=54321: No such file or directory
+  as_stats.rss=0xd8 (123.000kB)
+      pid  start time  name Arguments
+        1 Oct 04 05:27 sbin/init  /sbin/init splash
+      123 Oct 04 05:27 usr/share/code/code  /usr/share/code/code --type=utility --utility-sub-type=node.mojom.NodeService --lang=en-US
+      456 Oct 04 05:27 usr/share/musicplayer/musicplayer  /usr/share/musicplayer/musicplayer --type=gpu-process --no-sandbox --enable-crash-reporter=, --change-stack-guard-on-fork=enable
+      789 Oct 04 05:27 usr/lib/messageservice/messageservice  /usr/lib/messageservice/messageservice --type=utility --utility-sub-type=audio.mojom.AudioService --lang=en-US
+    12345 Oct 04 05:27 bin/usr/bin/python3 /bin/usr/bin/python3 /usr/bin/landscape-monitor--ignore-sigint
+    54321 Oct 04 05:27 bin/bash  bash

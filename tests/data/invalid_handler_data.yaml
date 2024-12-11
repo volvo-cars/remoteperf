@@ -1,0 +1,14 @@
+systemd-analyze: |
+  Startup finished in 11.406s (kernel) + 11.725s (userspace) =
+
+"cat /proc/stat | head -n 1 && sleep 0.3 && cat /proc/stat | head -n 1": |
+  cpu  1291056 2508 364484 13290545 7725 0 5683 0 0 0
+  cpu  1291057 2509 364485 13290546 7726 1 5684
+
+"date": |
+  Sat May 18 12:00:00 GMT 2024
+
+"command -v *": ""
+
+'[ -e "/dev/bmetrics" ] && echo "True" || echo "False"': "False"
+

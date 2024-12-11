@@ -1,0 +1,18 @@
+services:
+  emulator:
+    image: remoteperf_integration_test:dev1
+    container_name: remoteperf_integration_test
+    privileged: true
+    tty: true
+    network_mode: none
+    stdin_open: true
+    volumes:
+      - ${PWD}:${PWD}
+    environment:
+      - PYTHONPATH=${PWD}
+      - NOXENVPATH=.nox/integration_test/bin/activate
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/healthcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
