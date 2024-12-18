@@ -50,6 +50,7 @@ Building remains a manual step for now:
 
 ```bash
 nox -e build_integration_image
+```
 
 ### Releasing
 
