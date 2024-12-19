@@ -8,15 +8,31 @@ from src.models.base import (
     BaseCpuSample,
     BaseCpuUsageInfo,
     BaseMemorySample,
+    BaseNetworkTranceiveDeltaSample,
     BootTimeInfo,
     ExtendedMemoryInfo,
+    LinuxNetworkInterfaceDeltaSampleList,
+    LinuxNetworkInterfaceSample,
+    LinuxNetworkReceiveDeltaSample,
+    LinuxNetworkTransmitDeltaSample,
+    LinuxReceivePacketData,
+    LinuxTransmitPacketData,
     MemoryInfo,
     ModelList,
     SystemMemory,
     SystemUptimeInfo,
 )
-from src.models.linux import LinuxCpuModeUsageInfo, LinuxCpuUsageInfo, LinuxResourceSample
-from src.models.super import MemorySampleProcessInfo, ProcessMemoryList, ResourceSampleProcessInfo
+from src.models.linux import (
+    LinuxCpuModeUsageInfo,
+    LinuxCpuUsageInfo,
+    LinuxResourceSample,
+)
+from src.models.super import (
+    LinuxNetworkInterfaceList,
+    MemorySampleProcessInfo,
+    ProcessMemoryList,
+    ResourceSampleProcessInfo,
+)
 
 
 def get_time_py_pid(lst, pid):
@@ -243,3 +259,190 @@ def test_type_process(linux_handler: LinuxHandler):
 def test_missing_boot_time_exception(broken_linux_handler):
     with pytest.raises(MissingLinuxCapabilityException):
         broken_linux_handler.get_boot_time()
+
+
+def test_network_usage_total(linux_handler):
+    output = linux_handler.get_network_usage_total()
+    desired_output_total = [
+        LinuxNetworkInterfaceSample(
+            name="lo",
+            receive=LinuxReceivePacketData(
+                kibibytes=1024 / 1024,
+                packets=10,
+                errs=0,
+                drop=0,
+                fifo=0,
+                frame=0,
+                compressed=0,
+                multicast=0,
+            ),
+            transmit=LinuxTransmitPacketData(
+                kibibytes=2048 / 1024,
+                packets=20,
+                errs=0,
+                drop=0,
+                fifo=0,
+                colls=0,
+                carrier=0,
+                compressed=0,
+            ),
+        ),
+        LinuxNetworkInterfaceSample(
+            name="eth0",
+            receive=LinuxReceivePacketData(
+                kibibytes=4096 / 1024,
+                packets=50,
+                errs=0,
+                drop=0,
+                fifo=0,
+                frame=0,
+                compressed=0,
+                multicast=1,
+            ),
+            transmit=LinuxTransmitPacketData(
+                kibibytes=5120 / 1024,
+                packets=60,
+                errs=0,
+                drop=0,
+                fifo=0,
+                colls=0,
+                carrier=0,
+                compressed=0,
+            ),
+        ),
+    ]
+    for interface in output:
+        assert interface.model_dump(exclude=["timestamp"]) == desired_output_total.pop(0).model_dump(
+            exclude=["timestamp"]
+        )
+
+
+desired_output = LinuxNetworkInterfaceList(
+    [
+        LinuxNetworkInterfaceDeltaSampleList(
+            name="lo",
+            receive=[
+                LinuxNetworkReceiveDeltaSample(
+                    kibibytes=1.0,
+                    packets=10,
+                    errs=0,
+                    drop=0,
+                    fifo=0,
+                    frame=0,
+                    compressed=0,
+                    multicast=0,
+                    rate=1.0,
+                    sampletimediff=1.0,
+                )
+            ],
+            transmit=[
+                LinuxNetworkTransmitDeltaSample(
+                    kibibytes=2.0,
+                    packets=10,
+                    errs=0,
+                    drop=0,
+                    fifo=0,
+                    colls=0,
+                    carrier=0,
+                    compressed=0,
+                    rate=2.0,
+                    sampletimediff=1.0,
+                )
+            ],
+        ),
+        LinuxNetworkInterfaceDeltaSampleList(
+            name="eth0",
+            receive=[
+                LinuxNetworkReceiveDeltaSample(
+                    kibibytes=4.0,
+                    packets=50,
+                    errs=0,
+                    drop=0,
+                    fifo=0,
+                    frame=0,
+                    compressed=0,
+                    multicast=1,
+                    rate=4.0,
+                    sampletimediff=1.0,
+                )
+            ],
+            transmit=[
+                LinuxNetworkTransmitDeltaSample(
+                    kibibytes=5.0,
+                    packets=20,
+                    errs=0,
+                    drop=0,
+                    fifo=0,
+                    colls=0,
+                    carrier=0,
+                    compressed=0,
+                    rate=5.0,
+                    sampletimediff=1.0,
+                )
+            ],
+        ),
+    ]
+)
+
+
+def test_network_usage(linux_handler):
+    output = linux_handler.get_network_usage(interval=0.1)
+    for interface in output:
+        assert interface.model_dump(exclude="timestamp") in desired_output.model_dump(exclude="timestamp")
+
+
+def test_network_usage_continuous(linux_handler):
+    linux_handler.start_net_interface_measurement(interval=0.1)
+    time.sleep(0.1)
+    output = linux_handler.stop_net_interface_measurement()
+    for interface in output:
+        assert interface.model_dump(exclude="timestamp") in desired_output.model_dump(exclude="timestamp")
+
+
+def test_network_calc_tranceive(linux_handler):
+    linux_handler.start_net_interface_measurement(interval=0.1)
+    time.sleep(0.1)
+    output = linux_handler.stop_net_interface_measurement()
+    desired_transceive_output = {
+        "lo": BaseNetworkTranceiveDeltaSample(
+            kibibytes=3.0,
+            packets=20,
+            rate=3.0,
+        ),
+        "eth0": BaseNetworkTranceiveDeltaSample(
+            kibibytes=9.0,
+            packets=70,
+            rate=9.0,
+        ),
+    }
+    for interface in output:
+        assert interface.transceive[0].model_dump(exclude="timestamp") == desired_transceive_output[
+            interface.name
+        ].model_dump(exclude="timestamp")
+
+
+def test_network_calc_avg_transceive_rate(linux_handler):
+    linux_handler.start_net_interface_measurement(interval=0.1)
+    time.sleep(0.1)
+    output = linux_handler.stop_net_interface_measurement()
+    desired_avg_transceive_output = {"lo": 3.0, "eth0": 9.0}
+    for interface in output:
+        assert interface.avg_transceive_rate == desired_avg_transceive_output[interface.name]
+
+
+def test_network_calc_avg_receive_rate(linux_handler):
+    linux_handler.start_net_interface_measurement(interval=0.1)
+    time.sleep(0.1)
+    output = linux_handler.stop_net_interface_measurement()
+    desired_avg_receive_output = {"lo": 1.0, "eth0": 4.0}
+    for interface in output:
+        assert interface.avg_receive_rate == desired_avg_receive_output[interface.name]
+
+
+def test_network_calc_avg_transmit_rate(linux_handler):
+    linux_handler.start_net_interface_measurement(interval=0.1)
+    time.sleep(0.1)
+    output = linux_handler.stop_net_interface_measurement()
+    desired_avg_transmit_output = {"lo": 2.0, "eth0": 5.0}
+    for interface in output:
+        assert interface.avg_transmit_rate == desired_avg_transmit_output[interface.name]

@@ -2,19 +2,36 @@ import time
 
 import pytest
 
-from src.handlers.qnx_handler import MissingQnxCapabilityException, QNXHandler, QNXHandlerException
+from src.handlers.qnx_handler import (
+    MissingQnxCapabilityException,
+    QNXHandler,
+    QNXHandlerException,
+)
 from src.models.base import (
     BaseCpuSample,
     BaseCpuUsageInfo,
     BaseMemorySample,
+    BaseNetworkTranceiveDeltaSample,
     BootTimeInfo,
     MemoryInfo,
     ModelList,
     SystemMemory,
     SystemUptimeInfo,
 )
-from src.models.qnx import QnxCpuUsageInfo
-from src.models.super import CpuSampleProcessInfo, MemorySampleProcessInfo, ProcessInfo, ProcessMemoryList
+from src.models.qnx import (
+    QnxCpuUsageInfo,
+    QnxNetworkInterfaceDeltaSamples,
+    QnxNetworkInterfaceSample,
+    QnxNetworkPacketDeltaSample,
+    QnxPacketData,
+)
+from src.models.super import (
+    CpuSampleProcessInfo,
+    MemorySampleProcessInfo,
+    ProcessInfo,
+    ProcessMemoryList,
+    QnxNetworkInterfaceList,
+)
 
 
 @pytest.fixture
@@ -212,3 +229,164 @@ def test_get_cpu_proc_exception(broken_qnx_handler):
 def test_start_cpu_proc_exception(broken_qnx_handler):
     with pytest.raises(MissingQnxCapabilityException):
         broken_qnx_handler.start_cpu_measurement_proc_wise(1)
+
+
+def test_network_usage_total(qnx_handler):
+    output = qnx_handler.get_network_usage_total()
+    desired_output_total = [
+        QnxNetworkInterfaceSample(
+            name="eq0",
+            receive=QnxPacketData(
+                kibibytes=1024 / 1024,
+                packets=10,
+                broadcast=1,
+                multicast=2,
+            ),
+            transmit=QnxPacketData(
+                kibibytes=2048 / 1024,
+                packets=20,
+                broadcast=3,
+                multicast=4,
+            ),
+        ),
+        QnxNetworkInterfaceSample(
+            name="vlan0",
+            receive=QnxPacketData(
+                kibibytes=4096 / 1024,
+                packets=50,
+                broadcast=1,
+                multicast=2,
+            ),
+            transmit=QnxPacketData(
+                kibibytes=5120 / 1024,
+                packets=60,
+                broadcast=3,
+                multicast=4,
+            ),
+        ),
+    ]
+    for interface in output:
+        assert interface.model_dump(exclude=["timestamp"]) == desired_output_total.pop(0).model_dump(
+            exclude=["timestamp"]
+        )
+
+
+desired_output = QnxNetworkInterfaceList(
+    [
+        QnxNetworkInterfaceDeltaSamples(
+            name="eq0",
+            receive=[
+                QnxNetworkPacketDeltaSample(
+                    kibibytes=1.0,
+                    packets=10,
+                    broadcast=1,
+                    multicast=1,
+                    rate=1.0,
+                    sampletimediff=1.0,
+                )
+            ],
+            transmit=[
+                QnxNetworkPacketDeltaSample(
+                    kibibytes=2.0,
+                    packets=10,
+                    broadcast=1,
+                    multicast=1,
+                    rate=2.0,
+                    sampletimediff=1.0,
+                )
+            ],
+        ),
+        QnxNetworkInterfaceDeltaSamples(
+            name="vlan0",
+            receive=[
+                QnxNetworkPacketDeltaSample(
+                    kibibytes=4.0,
+                    packets=50,
+                    broadcast=2,
+                    multicast=2,
+                    rate=4.0,
+                    sampletimediff=1.0,
+                )
+            ],
+            transmit=[
+                QnxNetworkPacketDeltaSample(
+                    kibibytes=5.0,
+                    packets=20,
+                    broadcast=2,
+                    multicast=2,
+                    rate=5.0,
+                    sampletimediff=1.0,
+                )
+            ],
+        ),
+    ]
+)
+
+
+def test_network_usage(qnx_handler):
+    output = qnx_handler.get_network_usage(interval=1)
+    # Rate and timestamp are not deterministic for QNX and tested in linux function
+    for interface in output:
+        assert interface.model_dump(exclude=["timestamp", "sampletimediff", "rate"]) in desired_output.model_dump(
+            exclude=["timestamp", "sampletimediff", "rate"]
+        )
+
+
+def test_network_usage_continuous(qnx_handler):
+    qnx_handler.start_net_interface_measurement(interval=1)
+    time.sleep(0.1)
+    output = qnx_handler.stop_net_interface_measurement()
+    # Rate and timestamp are not deterministic for QNX and tested in linux function
+    for interface in output:
+        assert interface.model_dump(exclude=["timestamp", "sampletimediff", "rate"]) in desired_output.model_dump(
+            exclude=["timestamp", "sampletimediff", "rate"]
+        )
+
+
+def test_network_calc_tranceive(qnx_handler):
+    qnx_handler.start_net_interface_measurement(interval=0.1)
+    time.sleep(0.1)
+    output = qnx_handler.stop_net_interface_measurement()
+    desired_transceive_output = {
+        "eq0": BaseNetworkTranceiveDeltaSample(
+            kibibytes=3.0,
+            packets=20,
+            rate=30.0,
+        ),
+        "vlan0": BaseNetworkTranceiveDeltaSample(
+            kibibytes=9.0,
+            packets=70,
+            rate=9.0,
+        ),
+    }
+    for interface in output:
+        assert interface.transceive[0].model_dump(exclude=["timestamp", "rate"]) == desired_transceive_output[
+            interface.name
+        ].model_dump(exclude=["timestamp", "rate"])
+
+
+def test_network_calc_avg_transceive_rate(qnx_handler):
+    qnx_handler.start_net_interface_measurement(interval=0.1)
+    time.sleep(0.1)
+    output = qnx_handler.stop_net_interface_measurement()
+    desired_avg_transceive_output = {"eq0": 30.0, "vlan0": 90.0}
+    for interface in output:
+        assert interface.avg_transceive_rate == desired_avg_transceive_output[interface.name]
+
+
+def test_network_calc_avg_receive_rate(qnx_handler):
+    qnx_handler.start_net_interface_measurement(interval=0.1)
+    time.sleep(0.1)
+    output = qnx_handler.stop_net_interface_measurement()
+    desired_avg_receive_output = {"eq0": 10.0, "vlan0": 40.0}
+    for interface in output:
+        assert interface.avg_receive_rate == desired_avg_receive_output[interface.name]
+
+
+def test_network_calc_avg_transmit_rate(qnx_handler):
+    qnx_handler.start_net_interface_measurement(interval=0.1)
+    time.sleep(0.1)
+    output = qnx_handler.stop_net_interface_measurement()
+    desired_avg_transmit_output = {"eq0": 20.0, "vlan0": 50.0}
+    for interface in output:
+        assert interface.avg_transmit_rate == desired_avg_transmit_output[interface.name]

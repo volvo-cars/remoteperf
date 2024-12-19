@@ -2,12 +2,20 @@
 # SPDX-License-Identifier: Apache-2.0
 import re
 from datetime import datetime
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from attrs import fields
 
 from src._parsers.generic import ParsingError
-from src.models.base import Process
+from src.models.base import (
+    LinuxNetworkInterfaceDeltaSampleList,
+    LinuxNetworkInterfaceSample,
+    LinuxNetworkReceiveDeltaSample,
+    LinuxNetworkTransmitDeltaSample,
+    LinuxReceivePacketData,
+    LinuxTransmitPacketData,
+    Process,
+)
 from src.models.linux import LinuxCpuModeUsageInfo
 from src.utils.math import Vector
 
@@ -207,3 +215,70 @@ def parse_systemd_analyze(analyze_string: str) -> dict:
         results["extra"]["graphical.target"] = float(target_time.group(1))
 
     return results
+
+
+def parse_proc_net_dev(proc_net_data: List[str]) -> dict:
+    net_dev_info = {}
+    data_pattern = re.compile(r"(\S+):" + r"".join([r"\s+(\d+)"] * 16))
+    time_pattern = re.compile(r"(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}),(\d{6})\d*(\+\d{2}:\d{2})")
+
+    receive = ("kibibytes", "packets", "errs", "drop", "fifo", "frame", "compressed", "multicast")
+    transmit = ("kibibytes", "packets", "errs", "drop", "fifo", "colls", "carrier", "compressed")
+
+    try:
+        match = re.search(time_pattern, proc_net_data)
+        timestamp_str = f"{match.group(1)}.{match.group(2)}{match.group(3)}"
+        sample_time = datetime.fromisoformat(timestamp_str)
+        for matches in re.finditer(data_pattern, proc_net_data):
+            iface = matches.group(1).strip()
+            receive_data = [int(matches.group(i)) for i in range(2, 10)]
+            transmit_data = [int(matches.group(i)) for i in range(10, 18)]
+
+            net_dev_info[iface] = {
+                "receive": dict(zip(receive, receive_data)),
+                "transmit": dict(zip(transmit, transmit_data)),
+            }
+
+            # Add sampletime and sampletimestamp to the dictionary
+            net_dev_info[iface]["receive"]["sampletimediff"] = sample_time
+            net_dev_info[iface]["transmit"]["sampletimediff"] = sample_time
+            # Convert bytes to kibibytes
+            net_dev_info[iface]["receive"]["kibibytes"] = net_dev_info[iface]["receive"]["kibibytes"] / 1024
+            net_dev_info[iface]["transmit"]["kibibytes"] = net_dev_info[iface]["transmit"]["kibibytes"] / 1024
+
+    except KeyError as e:
+        raise ParsingError(f"An error occurred while parsing {proc_net_data}") from e
+
+    return net_dev_info
+
+
+def parse_net_data(net_sample: dict) -> List[LinuxNetworkInterfaceSample]:
+    list_of_interfaces = []
+
+    for interface, data in net_sample.items():
+        data["receive"].pop("sampletimediff", None)
+        data["transmit"].pop("sampletimediff", None)
+        list_of_interfaces.append(
+            LinuxNetworkInterfaceSample(
+                name=interface,
+                receive=LinuxReceivePacketData(**data["receive"]),
+                transmit=LinuxTransmitPacketData(**data["transmit"]),
+            )
+        )
+
+    return list_of_interfaces
+
+
+def parse_net_deltadata(net_sample: dict) -> List[LinuxNetworkInterfaceDeltaSampleList]:
+    list_of_interfaces = []
+
+    for interface, data in net_sample.items():
+        list_of_interfaces.append(
+            LinuxNetworkInterfaceDeltaSampleList(
+                name=interface,
+                receive=[LinuxNetworkReceiveDeltaSample(**data["receive"])],
+                transmit=[LinuxNetworkTransmitDeltaSample(**data["transmit"])],
+            )
+        )
+
+    return list_of_interfaces

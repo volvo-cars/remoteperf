@@ -2,7 +2,14 @@
 # SPDX-License-Identifier: Apache-2.0
 from abc import ABC, abstractmethod
 
-from src.models.base import BaseCpuUsageInfo, BootTimeInfo, SystemMemory, SystemUptimeInfo
+from src.models.base import (
+    BaseCpuUsageInfo,
+    BaseNetworkInterfaceDeltaSampleList,
+    BaseNetworkInterfaceSample,
+    BootTimeInfo,
+    SystemMemory,
+    SystemUptimeInfo,
+)
 from src.models.super import CpuList, MemoryList, ProcessCpuList, ProcessMemoryList
 
 
@@ -58,6 +65,25 @@ class BaseHandler(ABC):
         --------------
         For Linux-based systems, the function returns a ExtendedMemoryInfo wrapper model
         for the mem field, which provides more detailed information about memory usage, as well as swap.
+        """
+
+    @abstractmethod
+    def get_network_usage_total(self) -> BaseNetworkInterfaceSample:
+        """
+        Retrieves the total network usage since the system was started.
+
+        :return: An object containing the total network usage since the system was started.
+        :rtype: BaseNetworkInterfaceSample
+        """
+
+    @abstractmethod
+    def get_network_usage(self, interval: float) -> BaseNetworkInterfaceDeltaSampleList:
+        """
+        Retrieves network usage information over a specified interval.
+
+        :param interval: The time interval in seconds over which the network usage is measured.
+        :return: An object containing network usage information over the specified interval.
+        :rtype: BaseNetworkInterfaceDeltaSampleList
         """
 
     @abstractmethod
@@ -210,6 +236,31 @@ class BaseHandler(ABC):
         """
 
     @abstractmethod
+    def start_net_interface_measurement(self, interval: float) -> None:
+        """
+        Starts a new thread which takes network measurements at specified intervals.
+
+        :param interval: The time interval, in seconds, between successive network measurements.
+                        The interval must be a positive number.
+        :type interval: float
+
+        :raises PosixHandlerException: If a network measurement thread is already running.
+
+        :example:
+            To start collecting network measurements every 2 seconds::
+
+                handler.start_net_measurement(2.0)
+
+        .. note::
+            The collected measurements are stored internally and can be retrieved
+            by calling :meth:`stop_net_measurement`, which stops the measurement thread
+            and returns the collected data.
+
+        .. seealso::
+            :meth:`stop_net_measurement` - Method to stop the network measurement thread.
+        """
+
+    @abstractmethod
     def stop_cpu_measurement_proc_wise(self) -> ProcessCpuList:
         """
         Stops an existing CPU measuring thread and returns the results.
@@ -235,4 +286,18 @@ class BaseHandler(ABC):
 
         .. seealso::
             :meth:`start_mem_measurement_proc_wise` - Method to start the memory measurement thread.
+        """
+
+    @abstractmethod
+    def stop_net_interface_measurement(self) -> BaseNetworkInterfaceDeltaSampleList:
+        """
+        Stops an existing network measuring thread and returns the results.
+
+        :return: A list of network measurement results.
+        :rtype: BaseNetworkInterfaceDeltaSampleList
+
+        :raises PosixHandlerException: If a network measurement thread is not running.
+
+        .. seealso::
+            :meth:`start_net_interface_measurement` - Method to start the network measurement thread.
         """

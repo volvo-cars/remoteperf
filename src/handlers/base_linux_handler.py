@@ -7,16 +7,27 @@ from typing import Dict, List, Tuple
 from src._parsers import linux as linux_parsers
 from src._parsers.generic import ParsingError
 from src.handlers.posix_implementation_handler import PosixHandlerException, PosixImplementationHandler
-from src.models.base import BaseMemorySample, Process, Sample, SystemMemory, SystemUptimeInfo
+from src.models.base import (
+    BaseMemorySample,
+    LinuxNetworkInterfaceDeltaSampleList,
+    LinuxNetworkReceiveDeltaSample,
+    LinuxNetworkTransmitDeltaSample,
+    Process,
+    Sample,
+    SystemMemory,
+    SystemUptimeInfo,
+)
 from src.models.linux import LinuxCpuUsageInfo, LinuxResourceSample
 from src.models.super import (
     CpuList,
+    LinuxNetworkInterfaceList,
     MemoryList,
     MemorySampleProcessInfo,
     ProcessMemoryList,
     ProcessResourceList,
     ResourceSampleProcessInfo,
 )
+from src.utils import _dict_utils as dict_utils
 
 
 class BaseLinuxHandlerException(PosixHandlerException):
@@ -51,6 +62,16 @@ class BaseLinuxHandler(PosixImplementationHandler):
         output = self._mem_measurement()
         with _handle_parsing_error(output):
             return SystemMemory(**linux_parsers.parse_proc_meminfo(output))
+
+    def get_network_usage_total(self) -> LinuxNetworkInterfaceList:
+        return linux_parsers.parse_net_data(self._net_measurement())
+
+    def get_network_usage(self, interval: float = 0.3) -> LinuxNetworkInterfaceList:
+        net_sample_1 = self._net_measurement()
+        time.sleep(max(time.time() + interval - time.time(), 0))
+        return LinuxNetworkInterfaceList(
+            linux_parsers.parse_net_deltadata(dict_utils.dict_diff(net_sample_1, self._net_measurement()))
+        )
 
     def get_cpu_usage_proc_wise(self, interval: float = 0.3, **_) -> ProcessResourceList:
         timestamp = time.time()
@@ -96,6 +117,9 @@ class BaseLinuxHandler(PosixImplementationHandler):
                 )
         return CpuList(parsed_results)
 
+    def start_net_interface_measurement(self, interval: float) -> None:
+        self._start_measurement(self._net_measurement, interval)
+
     def stop_mem_measurement(self) -> MemoryList:
         results, _ = self._stop_measurement(self._mem_measurement)
         parsed_results = []
@@ -105,6 +129,25 @@ class BaseLinuxHandler(PosixImplementationHandler):
                     SystemMemory(**linux_parsers.parse_proc_meminfo(sample.data, timestamp=sample.timestamp))
                 )
         return MemoryList(parsed_results)
+
+    def stop_net_interface_measurement(self) -> LinuxNetworkInterfaceList:
+        results, _ = self._stop_measurement(self._net_measurement)
+        parsed_results = {}
+        if len(results) < 2:
+            results.append(Sample(data=self._net_measurement()))
+        for s1, s2 in zip(results, results[1:]):
+            samples = dict_utils.dict_diff(s1.data, s2.data)
+            for interface, sample in samples.items():
+                if sample:
+                    parsed_results.setdefault(interface, {"name": interface})
+                    parsed_results[interface].setdefault("receive", []).append(
+                        LinuxNetworkReceiveDeltaSample(**sample["receive"])
+                    )
+                    parsed_results[interface].setdefault("transmit", []).append(
+                        LinuxNetworkTransmitDeltaSample(**sample["transmit"])
+                    )
+        lst = [LinuxNetworkInterfaceDeltaSampleList(**data) for data in parsed_results.values()]
+        return LinuxNetworkInterfaceList(lst)
 
     def start_cpu_measurement_proc_wise(self, interval: float) -> None:
         self._start_measurement(self._cpu_measurement_proc_wise, interval, self._process_cpu_measurements)
@@ -174,3 +217,7 @@ class BaseLinuxHandler(PosixImplementationHandler):
     def _mem_measurement(self, **_):
         command = "cat /proc/meminfo"
         return self._client.run_command(command)
+
+    def _net_measurement(self, **_) -> dict:
+        command = "cat /proc/net/dev && date --iso-8601=ns"
+        return linux_parsers.parse_proc_net_dev(self._client.run_command(command))

@@ -22,8 +22,8 @@ To communicate with a remote host, a handler is needed to specify which operatin
 
 .. code-block:: python
 
-    from src.clients import SSHClient
-    from src.handlers import LinuxHandler
+    from remoteperf.clients import SSHClient
+    from remoteperf.handlers import LinuxHandler
 
     with SSHClient("127.0.0.1", port=22, username="root", password="root") as instance:
         handler = LinuxHandler(instance)
@@ -110,8 +110,8 @@ The SSH client specifically also supports jump-posting:
 
 .. code-block:: python
 
-    from src.clients import SSHClient
-    from src.handlers import LinuxHandler
+    from remoteperf.clients import SSHClient
+    from remoteperf.handlers import LinuxHandler
 
     with SSHClient("127.0.0.1", port=22, username="root", password="root") as jump_client1:
         with SSHClient("host2", port=22, username="root", password="root", jump_client=jump_client1) as jump_client2:
@@ -125,8 +125,8 @@ Example 2: Basic Android Usage:
 
 .. code-block:: python
 
-    from src.clients import ADBClient
-    from src.handlers import AndroidHandler
+    from remoteperf.clients import ADBClient
+    from remoteperf.handlers import AndroidHandler
 
     with ADBClient(device_id=...) as instance:
         handler = AndroidHandler(instance)
@@ -147,8 +147,8 @@ Example 3: Basic QNX Usage:
 
 .. code-block:: python
 
-    from src.clients import SSHClient
-    from src.handlers import QNXHandler
+    from remoteperf.clients import SSHClient
+    from remoteperf.handlers import QNXHandler
 
     with SSHClient("127.0.0.1", port=22, username="root", password="root")  as instance:
         handler = QNXHandler(instance)
@@ -174,8 +174,8 @@ Example 4: Continuous background measurement:
 
 .. code-block:: python
 
-    from src.clients import SSHClient
-    from src.handlers import LinuxHandler
+    from remoteperf.clients import SSHClient
+    from remoteperf.handlers import LinuxHandler
 
     with SSHClient("127.0.0.1", port=22, username="root", password="root") as instance:
         handler = LinuxHandler(instance)
@@ -211,8 +211,8 @@ Example 5: Processwise Resource Measurement:
 
 .. code-block:: python
 
-    from src.clients import SSHClient
-    from src.handlers import LinuxHandler
+    from remoteperf.clients import SSHClient
+    from remoteperf.handlers import LinuxHandler
 
     with SSHClient("127.0.0.1", port=22, username="root", password="root") as client:
         handler = LinuxHandler(client)
@@ -240,8 +240,8 @@ Example 6: Continuous Processwise Resource Measurement:
 
 .. code-block:: python
 
-    from src.clients import SSHClient
-    from src.handlers import LinuxHandler
+    from remoteperf.clients import SSHClient
+    from remoteperf.handlers import LinuxHandler
 
     with SSHClient("127.0.0.1", port=22, username="root", password="root") as client:
         handler = LinuxHandler(client)
@@ -261,3 +261,35 @@ Example result (for a docker container running only sshd):
         ProcessInfo(pid=2769 name='sshd' command='sshd: root@notty' start_time='2507319' samples=[LinuxResourceSample(timestamp=datetime.datetime(2024, 8, 29, 15, 55, 57, 465394), mem_usage=8116.0, cpu_load=0.0), LinuxResourceSample(timestamp=datetime.datetime(2024, 8, 29, 15, 55, 58, 760324), mem_usage=8116.0, cpu_load=0.08), LinuxResourceSample(timestamp=datetime.datetime(2024, 8, 29, 15, 55, 59, 459172), mem_usage=8116.0, cpu_load=0.0)])
     ]
 
+Example 7: Network Usage Measurements, both individual and continuous:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Network measurements are setup similar to other KPIs. They can be pulled as a single measurement or continuously.
+For a single measurement, the following code can be used:
+
+ .. code-block:: python
+
+    from remoteperf.clients import SSHClient
+    from remoteperf.handlers import LinuxHandler
+
+    with SSHClient("127.0.0.1", port=22, username="root", password="root") as client:
+        handler = LinuxHandler(client)
+        current_network_usage = handler.get_network_usage()
+        total_network_usage = handler.get_network_usage_total()
+
+The result is then a list of handler-specific network information models. Current network usage is the current usage of the network interfaces, while total network usage is the total usage since the last reboot.
+
+The following is showing a continuous measurement:
+
+.. code-block:: python
+
+    from remoteperf.clients import SSHClient
+    from remoteperf.handlers import LinuxHandler
+
+    with SSHClient("127.0.0.1", port=22, username="root", password="root") as client:
+        handler = LinuxHandler(client)
+        handler.start_net_interface_measurement(0.1)
+        time.sleep(1)
+        result = handler.stop_net_interface_measurement()
+
+The result is then a list of handler-specific network information models. It is the same as the single measurement, except that it is a list of measurement.
