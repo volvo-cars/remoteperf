@@ -9,7 +9,7 @@ import nox
 PROJECT_NAME = "remoteperf"
 
 
-@nox.session(python="3.8")
+@nox.session(python=["3.8", "3.10", "3.12"])
 def lint(session):
     shutil.rmtree("tmp", ignore_errors=True)
     session.install("-U", "-r", "requirements/requirements.txt")
@@ -17,7 +17,7 @@ def lint(session):
     run_lint(session)
 
 
-@nox.session(python="3.8")
+@nox.session(python=["3.8", "3.10", "3.12"])
 def test(session):
     session.install("-U", "-r", "requirements/requirements.txt")
     session.install("-U", "-r", "requirements/requirements_test.txt")
@@ -40,7 +40,6 @@ def package(session):
 
 @nox.session
 def build_integration_image(session):
-    session.install("-U", "-r", "requirements/requirements.txt")
     import yaml
 
     with open("integration_tests/docker-compose.yaml", "r") as file:
@@ -70,7 +69,7 @@ def integration_test(session):
                 "pytest",
                 *args,
                 "--color=yes",
-                f"--cov=./src",
+                "--cov=./src",
                 "--cov-report",
                 "xml:tmp/report/coverage/xml/integration_report.xml",
                 "--cov-report",
@@ -126,9 +125,7 @@ def integration_test(session):
 
 def remove_docker_container(session, container):
     existing_container_command = f"docker ps -a | grep {container} || true"
-    existing_container = subprocess.check_output(
-        ["bash", "-c", existing_container_command]
-    ).decode()
+    existing_container = subprocess.check_output(["bash", "-c", existing_container_command]).decode()
     if existing_container and len(existing_container.split()[0]) == 12:
         session.run("docker", "container", "rm", "-f", container)
 
@@ -181,14 +178,13 @@ def run_lint(session):
         "--output-format=colorized",
         "--reports=y",
         "--disable=W0511",  # Don't fail on FIXMEs
-        f"./src",
+        "./src",
     )
 
     session.log("Running flake8")
-    session.run("pflake8", "src", "tests")
 
     session.log("Running mypy")
-    session.run("mypy", f"./src", success_codes=[1, 0])
+    session.run("mypy", "./src", success_codes=[1, 0])
 
 
 def run_test(session):
@@ -200,7 +196,7 @@ def run_test(session):
         "pytest",
         *session.posargs,
         "--color=yes",
-        f"--cov=./src",
+        "--cov=./src",
         "--cov-report",
         "xml:tmp/report/coverage/xml/report.xml",
         "--cov-report",

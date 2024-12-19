@@ -1,7 +1,7 @@
 # Copyright 2024 Volvo Cars
 # SPDX-License-Identifier: Apache-2.0
 from collections import namedtuple
-from typing import List, TypeVar
+from typing import List, TypeVar, Union
 
 import attr
 
@@ -11,10 +11,12 @@ from src.models.base import (
     BaseCpuUsageInfo,
     BaseMemorySample,
     BaseProcess,
+    LinuxNetworkInterfaceDeltaSampleList,
     ModelList,
     SystemMemory,
 )
 from src.models.linux import LinuxResourceSample
+from src.models.qnx import QnxNetworkInterfaceDeltaSamples
 from src.utils.attrs_util import attrs_init_replacement
 
 # Superstructure models that can't reside in base due to circular imports
@@ -180,4 +182,28 @@ class ProcessMemoryList(ModelList[MemorySampleProcessInfo], _ProcessMemoryList):
 
 
 class ProcessResourceList(ModelList[ResourceSampleProcessInfo], _ProcessCpuList, _ProcessMemoryList):
+    pass
+
+
+NetworkModelT = TypeVar(
+    "NetworkModelT", bound=Union[LinuxNetworkInterfaceDeltaSampleList, QnxNetworkInterfaceDeltaSamples]
+)
+
+
+class NetworkInterfaceList(ModelList[NetworkModelT]):
+    def filter_active_interfaces(self):
+        """
+        Returns all interfaces that have been active during the measurement period.
+
+        :return: A new instance of NetworkInterfaceList containing all active interfaces (trnsceive rate > 0).
+        :rtype: NetworkInterfaceList
+        """
+        return self.__class__(filter(lambda interface: interface.avg_transceive_rate > 0, self))
+
+
+class LinuxNetworkInterfaceList(NetworkInterfaceList[LinuxNetworkInterfaceDeltaSampleList]):
+    pass
+
+
+class QnxNetworkInterfaceList(NetworkInterfaceList[QnxNetworkInterfaceDeltaSamples]):
     pass

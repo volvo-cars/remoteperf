@@ -9,11 +9,15 @@ import regex as re
 from src._parsers import generic
 from src._parsers.generic import ParsingError, ParsingInfo
 from src.models.base import Process
+from src.models.qnx import (
+    QnxNetworkInterfaceDeltaSamples,
+    QnxNetworkInterfaceSample,
+    QnxNetworkPacketDeltaSample,
+    QnxPacketData,
+)
 
 
-def parse_hogs_cpu_usage(
-    hogs_output: str, timestamp: Optional[datetime] = None
-) -> dict:
+def parse_hogs_cpu_usage(hogs_output: str, timestamp: Optional[datetime] = None) -> dict:
     """
     Parses CPU usage data from the output of the 'hogs' command and returns a summary of the CPU load and per-core load.
 
@@ -61,9 +65,7 @@ def parse_hogs_cpu_usage(
     return result
 
 
-def parse_hogs_pidin_proc_wise(
-    raw_cpu_data: str, timestamp: Optional[datetime] = None
-) -> Dict[Process, dict]:
+def parse_hogs_pidin_proc_wise(raw_cpu_data: str, timestamp: Optional[datetime] = None) -> Dict[Process, dict]:
     """
     Parses CPU usage data and process information from a concatenated string of 'hogs' and `pidin` outputs.
 
@@ -104,18 +106,13 @@ def parse_hogs_pidin_proc_wise(
     """
     timestamp = timestamp or datetime.now()
     parsed_hogs_data = parse_hogs(raw_cpu_data, ("SYS", "PID", "NAME"))
-    parsed_pidin_data = parse_pidin(
-        raw_cpu_data, ("pid", "name", "Arguments", "start_time")
-    )
+    parsed_pidin_data = parse_pidin(raw_cpu_data, ("pid", "name", "Arguments", "start_time"))
 
     result = {}
 
     for pid, process in parsed_pidin_data.items():
         hogs_process = parsed_hogs_data.get(pid)
-        if hogs_process and (
-            hogs_process["NAME"] in process["name"]
-            or hogs_process["NAME"] in process["Arguments"]
-        ):
+        if hogs_process and (hogs_process["NAME"] in process["name"] or hogs_process["NAME"] in process["Arguments"]):
             p = Process(
                 pid=process["pid"],
                 name=process["name"],
@@ -176,9 +173,7 @@ def parse_mem_usage_from_proc_files(
     """
     timestamp = timestamp or datetime.now()
 
-    parsed_pidin = parse_pidin(
-        raw_process_memory_usage, required=("pid", "name", "Arguments", "start_time")
-    )
+    parsed_pidin = parse_pidin(raw_process_memory_usage, required=("pid", "name", "Arguments", "start_time"))
     parsed_procfiles = parse_memory_per_pid(raw_process_memory_usage)
     result = {}
     for pid, process in parsed_pidin.items():
@@ -258,18 +253,10 @@ def parse_pidin(raw_pidin_data: str, required: Tuple[str]) -> dict:
             r"([a-zA-Z]{3}\s+\d+\s+\d{2}:\d{2})",
             str,
         ),
-        "utime": ParsingInfo(
-            r"([\d.smhd]+)", generic.convert_compact_format_to_seconds
-        ),
-        "stime": ParsingInfo(
-            r"([\d.smhd]+)", generic.convert_compact_format_to_seconds
-        ),
-        "cutime": ParsingInfo(
-            r"([\d.smhd]+)", generic.convert_compact_format_to_seconds
-        ),
-        "cstime": ParsingInfo(
-            r"([\d.smhd]+)", generic.convert_compact_format_to_seconds
-        ),
+        "utime": ParsingInfo(r"([\d.smhd]+)", generic.convert_compact_format_to_seconds),
+        "stime": ParsingInfo(r"([\d.smhd]+)", generic.convert_compact_format_to_seconds),
+        "cutime": ParsingInfo(r"([\d.smhd]+)", generic.convert_compact_format_to_seconds),
+        "cstime": ParsingInfo(r"([\d.smhd]+)", generic.convert_compact_format_to_seconds),
         "Arguments": ParsingInfo(r"(.*)", lambda x: x),
     }
     return generic.parse_table(raw_pidin_data, categories, required=required)
@@ -287,9 +274,7 @@ def parse_hogs(raw_pidin_data: str, required: Tuple[str]) -> dict:
     return generic.parse_table(raw_pidin_data, categories, required=required)
 
 
-def parse_proc_vm_stat(
-    raw_memory_usage: str, timestamp: Optional[datetime] = None
-) -> dict:
+def parse_proc_vm_stat(raw_memory_usage: str, timestamp: Optional[datetime] = None) -> dict:
     """
         Parses memory usage statistics from a string and calculates total, used, and free memory.
 
@@ -361,15 +346,11 @@ def parse_bmetrics_boot_time(raw_output: str) -> dict:
         ns = int(match.group(2).replace("ns", ""))
         boot_time = seconds + (ns / (10**9))
     else:
-        raise ParsingError(
-            f"Unable to extract boot time: no match found for pattern: {pattern}"
-        )
+        raise ParsingError(f"Unable to extract boot time: no match found for pattern: {pattern}")
     return {"total": boot_time}  # type: ignore[call-arg]
 
 
-def parse_uptime(
-    boot_data: str, date_data: str, timestamp: Optional[datetime] = None
-) -> dict:
+def parse_uptime(boot_data: str, date_data: str, timestamp: Optional[datetime] = None) -> dict:
     """
     Parses boot and date information to calculate system uptime.
 
@@ -397,9 +378,7 @@ def parse_uptime(
         try:
             boot_time_str = boot_time_match.group(1) + " " + boot_time_match.group(2)
             boot_time = datetime.strptime(boot_time_str, "%b %d %H:%M:%S %Y")
-            current_time = datetime.strptime(
-                date_data.strip(), "%a %b %d %H:%M:%S %Z %Y"
-            )
+            current_time = datetime.strptime(date_data.strip(), "%a %b %d %H:%M:%S %Z %Y")
             uptime = current_time - boot_time
         except ValueError as e:
             raise ParsingError("Failed to parse datetime data from data") from e
@@ -407,3 +386,101 @@ def parse_uptime(
         raise ParsingError("Error during extracting data")
 
     return {"total": uptime.total_seconds(), "timestamp": timestamp}
+
+
+def parse_nicinfo(nicinfo_output: str) -> dict:
+    interfaces = {}
+    receive_names = {
+        "kibibytes": "Bytes Received OK",
+        "packets": "Packets Received OK",
+        "broadcast": "Broadcast Packets Received OK",
+        "multicast": "Multicast Packets Received OK",
+    }
+    transmit_names = {
+        "kibibytes": "Bytes Transmitted OK",
+        "packets": "Packets Transmitted OK",
+        "broadcast": "Broadcast Packets Transmitted OK",
+        "multicast": "Multicast Packets Transmitted OK",
+    }
+
+    try:
+        nicinfo_interface_list = re.split(r"\n(?=[a-zA-Z]+)", nicinfo_output.strip())
+
+        # QNX does not provide timestamps via console in the precision we need (only seconds available via date).
+        # Therefore we switch to the timestamp of the host system.
+        # Which should be fine as we only consider it for time differences.
+        sampletime = datetime.now()
+
+        for nicinfo_interface in nicinfo_interface_list:
+            nicinfo_interface_output = nicinfo_interface.strip().split("\n")
+            interface_name = nicinfo_interface_output[0].strip(": ")
+
+            if nicinfo_interface_output[1:]:
+                interface_values = parse_nicinfo_interface(nicinfo_interface_output[1:], receive_names, transmit_names)
+                interfaces[interface_name] = {
+                    "receive": dict(
+                        zip(receive_names.keys(), [interface_values[name] for name in receive_names.values()])
+                    ),
+                    "transmit": dict(
+                        zip(transmit_names.keys(), [interface_values[name] for name in transmit_names.values()])
+                    ),
+                }
+                # Add sampletime and sampletimestamp to the dictionary
+                interfaces[interface_name]["receive"]["sampletimediff"] = sampletime
+                interfaces[interface_name]["transmit"]["sampletimediff"] = sampletime
+
+    except Exception as e:
+        raise ParsingError(f"Error when parsing nicinfo output: {nicinfo_output}") from e
+
+    return interfaces
+
+
+def parse_nicinfo_interface(nicinfo_output: str, receive_names, transmit_names) -> dict:
+    nicinfo_values = {}
+    for line in nicinfo_output:
+        if not line or "Ethernet Controller" in line:
+            continue
+        name_value_split = re.split(r"\s+\.+\s+", line)
+        if len(name_value_split) == 2 and name_value_split[0].strip() in set(receive_names.values()) | set(
+            transmit_names.values()
+        ):
+            name, value = name_value_split
+            nicinfo_values[name.strip()] = int(value.strip())
+
+    # Convert bytes to kibibytes
+    nicinfo_values[receive_names["kibibytes"]] = nicinfo_values.get(receive_names["kibibytes"]) / 1024
+    nicinfo_values[transmit_names["kibibytes"]] = nicinfo_values.get(transmit_names["kibibytes"]) / 1024
+
+    return nicinfo_values
+
+
+def parse_net_data(net_sample: dict) -> QnxNetworkInterfaceSample:
+    list_of_interfaces = []
+
+    for interface, data in net_sample.items():
+        data["receive"].pop("sampletimediff")
+        data["transmit"].pop("sampletimediff")
+        list_of_interfaces.append(
+            QnxNetworkInterfaceSample(
+                name=interface,
+                receive=QnxPacketData(**data["receive"]),
+                transmit=QnxPacketData(**data["transmit"]),
+            )
+        )
+
+    return list_of_interfaces
+
+
+def parse_net_deltadata(net_sample: dict) -> QnxNetworkInterfaceDeltaSamples:
+    list_of_interfaces = []
+
+    for interface, data in net_sample.items():
+        list_of_interfaces.append(
+            QnxNetworkInterfaceDeltaSamples(
+                name=interface,
+                receive=[QnxNetworkPacketDeltaSample(**data["receive"])],
+                transmit=[QnxNetworkPacketDeltaSample(**data["transmit"])],
+            )
+        )
+
+    return list_of_interfaces
