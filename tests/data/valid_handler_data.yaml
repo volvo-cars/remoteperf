@@ -320,3 +320,127 @@ systemd-analyze: |
     911 ((sd-pam)) S 910 910 910 0 -1 1077936448 54 0 0 0 0 0 0 0 20 0 1 0 1815 106061824 926 18446744073709551615 1 1 0 0 0 0 0 4096 0 0 0 0 17 2 0 0 0 0 0 0 0 0 0 0 0 0 0
     /bin/cat: /proc/911/io: Permission denied
     (sd-pam)/bin/cat: e39f7761903b: No such file or directory
+
+"cat /proc/net/dev && date --iso-8601=ns":
+  - |
+    Inter-|   Receive                                                |  Transmit
+    face |bytes    packets errs drop fifo frame compressed multicast|bytes    packets errs drop fifo colls carrier compressed
+    lo: 1024  10    0    0    0     0          0         0 2048  20    0    0    0     0       0          0
+    eth0: 4096 50    0    0    0     0          0       1 5120  60    0    0    0     0       0          0
+    2024-10-25T13:11:22,630572145+00:00
+  - |
+    Inter-|   Receive                                                |  Transmit
+    face |bytes    packets errs drop fifo frame compressed multicast|bytes    packets errs drop fifo colls carrier compressed
+    lo: 2048  20    0    0    0     0          0         0 4096  30    0    0    0     0       0          0
+    eth0: 8192 100    0    0    0     0          0       2 10240  80    0    0    0     0       0          0
+    2024-10-25T13:11:23,630572245+00:00
+
+"nicinfo":
+  - |
+    eq0:
+       Ethernet Controller
+
+      Physical Node ID ........................... 000000 000000
+      Current Physical Node ID ................... 000001 000001
+      Current Operation Rate ..................... 2.50 Mb/s full-duplex
+      Active Interface Type ...................... SMI
+        Active PHY address ....................... 0
+      Maximum Transmittable data Unit ............ 0
+      Maximum Receivable data Unit ............... 0
+      Promiscuous Mode ........................... Off
+      Multicast Support .......................... Disabled
+
+      Packets Transmitted OK ..................... 20
+      Bytes Transmitted OK ....................... 2048
+      Broadcast Packets Transmitted OK ........... 3
+      Multicast Packets Transmitted OK ........... 4
+
+      Packets Received OK ........................ 10
+      Bytes Received OK .......................... 1024
+      Broadcast Packets Received OK .............. 1
+      Multicast Packets Received OK .............. 2
+
+      Received packets with CRC errors ........... 0
+      Short packets .............................. 0
+
+    vlan0:
+       Ethernet Controller
+
+      Physical Node ID ........................... 000000 000000
+      Current Physical Node ID ................... 000001 000001
+      Current Operation Rate ..................... 2.50 Mb/s full-duplex
+      Active Interface Type ...................... SMI
+        Active PHY address ....................... 0
+      Maximum Transmittable data Unit ............ 0
+      Maximum Receivable data Unit ............... 0
+      Promiscuous Mode ........................... Off
+      Multicast Support .......................... Disabled
+
+      Packets Transmitted OK ..................... 60
+      Bytes Transmitted OK ....................... 5120
+      Broadcast Packets Transmitted OK ........... 3
+      Multicast Packets Transmitted OK ........... 4
+
+      Packets Received OK ........................ 50
+      Bytes Received OK .......................... 4096
+      Broadcast Packets Received OK .............. 1
+      Multicast Packets Received OK .............. 2
+
+      Received packets with CRC errors ........... 0
+      Short packets .............................. 0
+
+    vlan1:
+  - |
+    eq0:
+       Ethernet Controller
+
+      Physical Node ID ........................... 000000 000000
+      Current Physical Node ID ................... 000001 000001
+      Current Operation Rate ..................... 2.50 Mb/s full-duplex
+      Active Interface Type ...................... SMI
+        Active PHY address ....................... 0
+      Maximum Transmittable data Unit ............ 0
+      Maximum Receivable data Unit ............... 0
+      Promiscuous Mode ........................... Off
+      Multicast Support .......................... Disabled
+
+      Packets Transmitted OK ..................... 30
+      Bytes Transmitted OK ....................... 4096
+      Broadcast Packets Transmitted OK ........... 4
+      Multicast Packets Transmitted OK ........... 5
+
+      Packets Received OK ........................ 20
+      Bytes Received OK .......................... 2048
+      Broadcast Packets Received OK .............. 2
+      Multicast Packets Received OK .............. 3
+
+      Received packets with CRC errors ........... 0
+      Short packets .............................. 0
+
+    vlan0:
+       Ethernet Controller
+
+      Physical Node ID ........................... 000000 000000
+      Current Physical Node ID ................... 000001 000001
+      Current Operation Rate ..................... 2.50 Mb/s full-duplex
+      Active Interface Type ...................... SMI
+        Active PHY address ....................... 0
+      Maximum Transmittable data Unit ............ 0
+      Maximum Receivable data Unit ............... 0
+      Promiscuous Mode ........................... Off
+      Multicast Support .......................... Disabled
+
+      Packets Transmitted OK ..................... 80
+      Bytes Transmitted OK ....................... 10240
+      Broadcast Packets Transmitted OK ........... 5
+      Multicast Packets Transmitted OK ........... 6
+
+      Packets Received OK ........................ 100
+      Bytes Received OK .......................... 8192
+      Broadcast Packets Received OK .............. 3
+      Multicast Packets Received OK .............. 4
+
+      Received packets with CRC errors ........... 0
+      Short packets .............................. 0
+
+    vlan1:

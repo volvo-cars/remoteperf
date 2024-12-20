@@ -1,5 +1,6 @@
 # Copyright 2024 Volvo Cars
 # SPDX-License-Identifier: Apache-2.0
+import time
 from contextlib import contextmanager
 from typing import Dict, List, Tuple
 
@@ -22,7 +23,12 @@ from remoteperf.models.base import (
     SystemMemory,
     SystemUptimeInfo,
 )
-from remoteperf.models.qnx import QnxCpuUsageInfo
+from remoteperf.models.qnx import (
+    QnxCpuUsageInfo,
+    QnxNetworkInterfaceDeltaSamples,
+    QnxNetworkInterfaceSample,
+    QnxNetworkPacketDeltaSample,
+)
 from remoteperf.models.super import (
     CpuList,
     CpuSampleProcessInfo,
@@ -31,7 +37,9 @@ from remoteperf.models.super import (
     MemorySampleProcessInfo,
     ProcessCpuList,
     ProcessMemoryList,
+    QnxNetworkInterfaceList,
 )
+from remoteperf.utils import _dict_utils as dict_utils
 from remoteperf.utils.threading import DelegatedExecutionThread
 
 
@@ -92,6 +100,16 @@ class QNXHandler(PosixImplementationHandler):
                 for p, sample in qnx_parsers.parse_mem_usage_from_proc_files(mem_sample).items()
             )
 
+    def get_network_usage_total(self) -> QnxNetworkInterfaceSample:
+        return qnx_parsers.parse_net_data(self._net_measurement())
+
+    def get_network_usage(self, interval: float = 0.3) -> QnxNetworkInterfaceList:
+        net_sample_1 = self._net_measurement()
+        time.sleep(max(time.time() + interval - time.time(), 0))
+        return QnxNetworkInterfaceList(
+            qnx_parsers.parse_net_deltadata(dict_utils.dict_diff(net_sample_1, self._net_measurement()))
+        )
+
     def get_system_uptime(self) -> SystemUptimeInfo:
         pidin = self._client.run_command("pidin info")
         date_data = self._client.run_command("date")
@@ -145,6 +163,9 @@ class QNXHandler(PosixImplementationHandler):
                 )
         return CpuList(parsed_results)
 
+    def start_net_interface_measurement(self, interval: float) -> None:
+        self._start_measurement(self._net_measurement, interval)
+
     def stop_mem_measurement(self) -> MemoryList:
         samples, _ = self._stop_measurement(self._mem_measurement)
         parsed_results = []
@@ -154,6 +175,24 @@ class QNXHandler(PosixImplementationHandler):
                     SystemMemory(**qnx_parsers.parse_proc_vm_stat(sample.data, timestamp=sample.timestamp))
                 )
         return MemoryList(parsed_results)
+
+    def stop_net_interface_measurement(self) -> QnxNetworkInterfaceList:
+        results, _ = self._stop_measurement(self._net_measurement)
+        parsed_results = {}
+        if len(results) < 2:
+            results.append(Sample(data=self._net_measurement()))
+        for s1, s2 in zip(results, results[1:]):
+            samples = dict_utils.dict_diff(s1.data, s2.data)
+            for interface, sample in samples.items():
+                parsed_results.setdefault(interface, {"name": interface})
+                parsed_results[interface].setdefault("receive", []).append(
+                    QnxNetworkPacketDeltaSample(**sample["receive"])
+                )
+                parsed_results[interface].setdefault("transmit", []).append(
+                    QnxNetworkPacketDeltaSample(**sample["transmit"])
+                )
+        lst = [QnxNetworkInterfaceDeltaSamples(**data) for data in parsed_results.values()]
+        return QnxNetworkInterfaceList(lst)
 
     def start_cpu_measurement_proc_wise(self, interval: int, **kwargs) -> None:
         """
@@ -216,6 +255,10 @@ class QNXHandler(PosixImplementationHandler):
             r"| grep rss && echo PIDIN_SEPARATOR && pidin -f atnA"
         )
         return self._client.run_command(command)
+
+    def _net_measurement(self, **_) -> dict:
+        command = "nicinfo"
+        return qnx_parsers.parse_nicinfo(self._client.run_command(command))
 
     def _process_cpu_measurements(
         self, results: List[Sample], processed_results: Dict[Process, List[tuple]]

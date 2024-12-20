@@ -40,7 +40,6 @@ def package(session):
 
 @nox.session
 def build_integration_image(session):
-    session.install("-U", "-r", "requirements/requirements.txt")
     import yaml
 
     with open("integration_tests/docker-compose.yaml", "r") as file:
@@ -178,7 +177,7 @@ def run_lint(session):
         "pylint",
         "--output-format=colorized",
         "--reports=y",
-        "--disable=W0511",  # Don't fail on FIXMEs
+        "--disable=W0511,R0903",  # Don't fail on FIXMEs
         "./remoteperf",
     )
 
