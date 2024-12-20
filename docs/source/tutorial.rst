@@ -326,3 +326,27 @@ The following is showing a continuous measurement:
         result = handler.stop_net_interface_measurement()
 
 The result is then a list of handler-specific network information models. It is the same as the single measurement, except that it is a list of measurement.
+
+
+Example97: Pulling pressure data (cpu, io, memory):
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: python
+    from src.clients import SSHClient
+    from src.handlers import LinuxHandler
+
+    with SSHClient("127.0.0.1", port=22, username="root", password="root") as client:
+        handler = LinuxHandler(client)
+        result = handler.get_pressure()
+
+The result is a model of pressure information for cpu, io and memory respectively. This is also possible to do continuously:
+
+.. code-block:: python
+
+    with SSHClient("127.0.0.1", port=22, username="root", password="root") as client:
+        handler = LinuxHandler(client)
+        handler.start_pressure_measurement(0.1)
+        time.sleep(1)
+        result = handler.stop_pressure_measurement()
+
+And will return a list of the objects obtained by get_pressure, together with some helpful properties.

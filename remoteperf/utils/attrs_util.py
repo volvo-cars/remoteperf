@@ -10,7 +10,6 @@ from cattr import Converter
 # Could not figure out how to make typing work, so we do this workaround
 def attrs_init_replacement(cls=None):
     def init(self, **kwargs):
-
         for attr in fields(cls):
             if not hasattr(self, attr.name):
                 value = kwargs.get(attr.name) if attr.name in kwargs else attr.default

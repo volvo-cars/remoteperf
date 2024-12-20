@@ -565,3 +565,78 @@ def test_network_calc_avg_transmit_rate(linux_handler):
     desired_avg_transmit_output = {"lo": 2.0, "eth0": 5.0}
     for interface in output:
         assert interface.avg_transmit_rate == desired_avg_transmit_output[interface.name]
+
+
+def test_get_pressure(linux_handler):
+    result = linux_handler.get_pressure()
+    desired_cpu = {
+        "full": {"avg10": 0.0, "avg300": 0.0, "avg60": 0.0, "total": 0},
+        "some": {"avg10": 0.13, "avg300": 0.13, "avg60": 0.13, "total": 205171290},
+    }
+
+    desired_io = {
+        "full": {"avg10": 0.0, "avg300": 0.0, "avg60": 0.0, "total": 18933747},
+        "some": {"avg10": 0.0, "avg300": 0.0, "avg60": 0.0, "total": 22426415},
+    }
+    desired_memory = {
+        "full": {"avg10": 0.0, "avg300": 0.0, "avg60": 0.0, "total": 898585},
+        "some": {"avg10": 0.0, "avg300": 0.0, "avg60": 0.0, "total": 923912},
+    }
+    assert result.cpu.model_dump(exclude="timestamp") == desired_cpu
+    assert result.io.model_dump(exclude="timestamp") == desired_io
+    assert result.memory.model_dump(exclude="timestamp") == desired_memory
+
+
+def test_get_continuous_pressure(linux_handler):
+    linux_handler.start_pressure_measurement(0.1)
+    time.sleep(0.3)
+    result = linux_handler.stop_pressure_measurement()
+    desired_cpu = [
+        {
+            "some": {"total": 205171290, "avg10": 0.13, "avg60": 0.13, "avg300": 0.13},
+            "full": {"total": 0, "avg10": 0.0, "avg60": 0.0, "avg300": 0.0},
+        },
+        {
+            "some": {"total": 205817451, "avg10": 0.0, "avg60": 0.04, "avg300": 0.1},
+            "full": {"total": 0, "avg10": 0.0, "avg60": 0.0, "avg300": 0.0},
+        },
+    ]
+
+    desired_io = [
+        {
+            "some": {"total": 22426415, "avg10": 0.0, "avg60": 0.0, "avg300": 0.0},
+            "full": {"total": 18933747, "avg10": 0.0, "avg60": 0.0, "avg300": 0.0},
+        },
+        {
+            "some": {"total": 22484643, "avg10": 0.0, "avg60": 0.0, "avg300": 0.0},
+            "full": {"total": 18986463, "avg10": 0.0, "avg60": 0.0, "avg300": 0.0},
+        },
+    ]
+    desired_memory = [
+        {
+            "some": {"total": 923912, "avg10": 0.0, "avg60": 0.0, "avg300": 0.0},
+            "full": {"total": 898585, "avg10": 0.0, "avg60": 0.0, "avg300": 0.0},
+        },
+        {
+            "some": {"total": 923912, "avg10": 0.0, "avg60": 0.0, "avg300": 0.0},
+            "full": {"total": 898585, "avg10": 0.0, "avg60": 0.0, "avg300": 0.0},
+        },
+    ]
+
+    assert result.cpu.model_dump(exclude="timestamp")[:2] == desired_cpu
+    assert result.io.model_dump(exclude="timestamp")[:2] == desired_io
+    assert result.memory.model_dump(exclude="timestamp")[:2] == desired_memory
+
+
+def test_get_highest_continuous_pressure(linux_handler):
+    linux_handler.start_pressure_measurement(0.1)
+    time.sleep(0.3)
+    result = linux_handler.stop_pressure_measurement()
+
+    desired_cpu = {"total": 0, "avg10": 1.0, "avg60": 0.0, "avg300": 0.0}
+    desired_io = {"total": 18992689, "avg10": 1.0, "avg60": 0.0, "avg300": 0.0}
+    desired_memory = {"total": 898585, "avg10": 1.0, "avg60": 0.0, "avg300": 0.0}
+
+    assert result.cpu.full.highest_pressure(1)[0].model_dump(exclude="timestamp") == desired_cpu
+    assert result.io.full.highest_pressure(1)[0].model_dump(exclude="timestamp") == desired_io
+    assert result.memory.full.highest_pressure(1)[0].model_dump(exclude="timestamp") == desired_memory

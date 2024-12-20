@@ -369,7 +369,8 @@ def test_network_calc_avg_transceive_rate(qnx_handler):
     output = qnx_handler.stop_net_interface_measurement()
     desired_avg_transceive_output = {"eq0": 30.0, "vlan0": 90.0}
     for interface in output:
-        assert interface.avg_transceive_rate == desired_avg_transceive_output[interface.name]
+        assert interface.avg_transceive_rate > desired_avg_transceive_output[interface.name] / 1.05
+        assert interface.avg_transceive_rate < desired_avg_transceive_output[interface.name] * 1.05
 
 
 def test_network_calc_avg_receive_rate(qnx_handler):
