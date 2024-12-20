@@ -8,10 +8,9 @@ from typing import Optional
 import pytest
 import yaml
 
-from src.clients.base_client import BaseClient
-from src.clients.ssh_client import SSHClient
-from src.handlers.linux_handler import LinuxHandler
-from src.handlers.qnx_handler import QNXHandler
+from remoteperf.clients.base_client import BaseClient
+from remoteperf.handlers.linux_handler import LinuxHandler
+from remoteperf.handlers.qnx_handler import QNXHandler
 
 
 class MockClient(BaseClient):
@@ -130,6 +129,13 @@ def mock_client():
 
 
 @pytest.fixture
+def mock_qnx_client():
+    with (pathlib.Path(__file__).parent / "data" / "valid_handler_data_qnx.yaml").open() as file:
+        queries = yaml.safe_load(file)
+    return MockClient(queries)
+
+
+@pytest.fixture
 def subprocess_client():
     return SubprocessLocalClient()
 
@@ -142,6 +148,11 @@ def linux_handler(mock_client):
 @pytest.fixture
 def qnx_handler(mock_client):
     return QNXHandler(client=mock_client)
+
+
+@pytest.fixture
+def unique_qnx_handler(mock_qnx_client):
+    return QNXHandler(client=mock_qnx_client)
 
 
 @pytest.fixture

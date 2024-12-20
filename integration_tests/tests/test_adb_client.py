@@ -5,13 +5,13 @@ import time
 
 import pytest
 
-from src.clients.adb_client import ADBClientException
-from src.clients.base_client import BaseClientException
-from src.handlers.android_handler import AndroidHandler
-from src.handlers.qnx_handler import MissingQnxCapabilityException, QNXHandler
-from src.models.base import BaseCpuSample, BaseMemorySample, SystemMemory
-from src.models.linux import LinuxCpuUsageInfo, LinuxResourceSample
-from src.models.super import ProcessInfo
+from remoteperf.clients.adb_client import ADBClientException
+from remoteperf.clients.base_client import BaseClientException
+from remoteperf.handlers.android_handler import AndroidHandler
+from remoteperf.handlers.qnx_handler import MissingQnxCapabilityException, QNXHandler
+from remoteperf.models.base import BaseCpuSample, BaseMemorySample, SystemMemory
+from remoteperf.models.linux import LinuxCpuUsageInfo, LinuxResourceSample
+from remoteperf.models.super import ProcessInfo
 
 
 def kill_adb_server():

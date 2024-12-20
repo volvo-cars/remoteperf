@@ -9,8 +9,8 @@ from pathlib import Path
 from threading import Lock
 from typing import Optional
 
-from src.clients.base_client import BaseClient, BaseClientException
-from src.utils.fs_utils import RemoteFs
+from remoteperf.clients.base_client import BaseClient, BaseClientException
+from remoteperf.utils.fs_utils import RemoteFs
 
 
 class LockClientException(BaseClientException):

@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 import uuid
 
-from src.clients.base_client import BaseClient
+from remoteperf.clients.base_client import BaseClient
 
 
 class RemoteFsException(Exception):

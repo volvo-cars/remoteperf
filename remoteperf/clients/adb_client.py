@@ -7,7 +7,7 @@ from typing import Union, overload
 
 from adbutils import AdbClient, AdbDevice, AdbError, AdbTimeout
 
-from src.clients.lock_client import LockClient, LockClientException
+from remoteperf.clients.lock_client import LockClient, LockClientException
 
 
 class ADBClientException(LockClientException):
@@ -15,20 +15,17 @@ class ADBClientException(LockClientException):
 
 
 class ADBClient(LockClient):
-
     _session: Union[subprocess.Popen, None]
 
     @overload
     def __init__(
         self, device_id: str, *, host: str = "127.0.0.1", port: int = 5037, timeout: int = 10, retries: int = 2
-    ) -> None:
-        ...
+    ) -> None: ...
 
     @overload
     def __init__(
         self, transport_id: int, *, host: str = "127.0.0.1", port: int = 5037, timeout: int = 10, retries: int = 2
-    ) -> None:
-        ...
+    ) -> None: ...
 
     def __init__(
         self, *args, host: str = "127.0.0.1", port: int = 5037, timeout: int = 10, retries: int = 2, **kwargs

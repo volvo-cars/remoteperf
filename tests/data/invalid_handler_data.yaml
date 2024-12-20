@@ -12,3 +12,26 @@ systemd-analyze: |
 
 '[ -e "/dev/bmetrics" ] && echo "True" || echo "False"': "False"
 
+
+"df": |
+  Filesystem     1K-blocks      Used Available Use% Mounted on
+  /dev/sda             7654321         0   1234567   11% /
+
+"cat /proc/diskstats": |
+  1       0 sda 123 12 1 4 45 456 7 78 789 0 321 21 654 54 987 87 98
+
+'/bin/cat $(ls /proc | grep "[0-9]" | sed "s:\([0-9]*\):e39f7761903b /proc/\1/stat /proc/\1/io /proc/\1/cmdline:") e39f7761903b 2>&1': &proc_disk_list
+  - |
+    /bin/cat: e39f7761903b: No such file or directory
+    846 (bash) S 844 846 846 34816 1055492 4194560 4316 23491 5 608 9 0 56 25 20 0 1 0 1715 6504448 1355 18446744073709551615 94242165944320 94242166857581 140721942657360 0 0 0 65536 3686404 1266761467 1 0 0 17 6 0 0 0 0 0 94242167102096 94242167150160 94243001663488 140721942665787 140721942665793 140721942665793 140721942667246 0
+    rchar: 1
+    wchar: 2
+    syscr: 3
+    syscw: 4
+    read_bytes: 5
+    write_bytes: 6
+    cancelled_write_bytes: 7
+    /bin/bash/bin/cat: e39f7761903b: No such file or directory
+    911 ((sd-pam)) S 910 910 910 0 -1 1077936448 54 0 0 0 0 0 0 0 20 0 1 0 1815 106061824 926 18446744073709551615 1 1 0 0 0 0 0 4096 0 0 0 0 17 2 0 0 0 0 0 0 0 0 0 0 0 0 0
+    /bin/cat: /proc/911/io: Permission denied
+    (sd-pam)/bin/cat: e39f7761903b: No such file or directory

@@ -20,7 +20,7 @@ import attr
 import yaml
 from typeguard import TypeCheckError, check_type
 
-from src.utils.attrs_util import attrs_init_replacement, converter
+from remoteperf.utils.attrs_util import attrs_init_replacement, converter
 
 
 class BaseRemoteperfModelException(Exception):
@@ -96,9 +96,7 @@ class ArithmeticBaseModel(BaseRemoteperfModel):
                     lambda a, b: a + b,
                 )
             )
-        raise TypeError(
-            f"Unsupported operand type(s) for +: '{type(self).__name__}' and '{type(other).__name__}'"
-        )
+        raise TypeError(f"Unsupported operand type(s) for +: '{type(self).__name__}' and '{type(other).__name__}'")
 
     def __div__(self, denominator):
         if isinstance(denominator, (float, int)):
@@ -109,9 +107,7 @@ class ArithmeticBaseModel(BaseRemoteperfModel):
                     lambda a, b: a / b,
                 )
             )
-        raise TypeError(
-            f"Unsupported operand type(s) for /: 'MemoryInfo' and '{type(denominator).__name__}'"
-        )
+        raise TypeError(f"Unsupported operand type(s) for /: 'MemoryInfo' and '{type(denominator).__name__}'")
 
     @classmethod
     def _recursive_op(cls, dict1, other, operation):
@@ -132,9 +128,7 @@ class ArithmeticBaseModel(BaseRemoteperfModel):
             elif value is None:
                 result[key] = None
             else:
-                raise TypeError(
-                    f"Unsupported value types for key '{key}': {type(value)} and {type(operand)}"
-                )
+                raise TypeError(f"Unsupported value types for key '{key}': {type(value)} and {type(operand)}")
         return result
 
     __floordiv__ = __div__
@@ -173,6 +167,41 @@ class ExtendedMemoryInfo(MemoryInfo):
     shared: int
     buff_cache: int
     available: int
+
+
+@attrs_init_replacement
+@attr.s(auto_attribs=True, kw_only=True)
+class DiskInfo(BaseInfoModel):
+    filesystem: str
+    size: int
+    used: int
+    available: int
+    used_percent: int
+    mounted_on: str
+
+
+@attrs_init_replacement
+@attr.s(auto_attribs=True, kw_only=True)
+class DiskIOInfo(BaseInfoModel):
+    device_major_number: int
+    device_minor_number: int
+    device_name: str
+    reads_completed: int
+    reads_merged: int
+    sectors_reads: int
+    time_spent_reading: int
+    writes_completed: int
+    writes_merged: int
+    sectors_written: int
+    time_spent_writing: int
+    IOs_currently_in_progress: int
+    time_spent_doing_io: int
+    weighted_time_spent_doing_io: int
+    discards_completed: int
+    discards_merged: int
+    sectors_discarded: int
+    time_spent_discarding: int
+    time_spent_flushing: int
 
 
 @attrs_init_replacement
@@ -221,6 +250,24 @@ class SystemMemory(ArithmeticBaseInfoModel):
 
     mem: Union[ExtendedMemoryInfo, MemoryInfo]
     swap: Optional[MemoryInfo] = None
+
+
+@attrs_init_replacement
+@attr.s(auto_attribs=True, kw_only=True)
+class DiskIOProcess(BaseRemoteperfModel):
+    rchar: int
+    wchar: int
+    syscr: int
+    syscw: int
+    read_bytes: int
+    write_bytes: int
+    cancelled_write_bytes: int
+
+
+@attrs_init_replacement
+@attr.s(auto_attribs=True, kw_only=True)
+class DiskIOProcessSample(ArithmeticBaseInfoModel, DiskIOProcess):
+    pass
 
 
 @attr.s(auto_attribs=True, kw_only=True)

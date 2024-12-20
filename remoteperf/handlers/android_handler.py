@@ -3,10 +3,10 @@
 import re
 from contextlib import contextmanager
 
-from src._parsers.generic import ParsingError
-from src.handlers.base_linux_handler import BaseLinuxHandler, BaseLinuxHandlerException
-from src.handlers.posix_implementation_handler import MissingPosixCapabilityException
-from src.models.base import BootTimeInfo
+from remoteperf._parsers.generic import ParsingError
+from remoteperf.handlers.base_linux_handler import BaseLinuxHandler, BaseLinuxHandlerException
+from remoteperf.handlers.posix_implementation_handler import MissingPosixCapabilityException
+from remoteperf.models.base import BootTimeInfo
 
 
 class AndroidHandlerException(BaseLinuxHandlerException):

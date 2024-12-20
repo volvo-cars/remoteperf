@@ -4,7 +4,7 @@ import threading
 import time
 from datetime import datetime
 
-from src.clients.base_client import BaseClient
+from remoteperf.clients.base_client import BaseClient
 
 
 class ThreadException(Exception):
@@ -59,13 +59,9 @@ class DelegatedExecutionThread(ExceptionThread):
         join=False,
         **kwargs,
     ):
-        filename = (
-            f"/tmp/remoteperf_delayed_{uid}-{round(datetime.now().timestamp()*100)}"
-        )
+        filename = f"/tmp/remoteperf_delayed_{uid}-{round(datetime.now().timestamp()*100)}"
         # Output from command is streamed into file, so we move the file to avoid race conditions
-        command = (
-            f"({command}) > {filename}_tmp && mv {filename}_tmp {filename} & echo $!"
-        )
+        command = f"({command}) > {filename}_tmp && mv {filename}_tmp {filename} & echo $!"
         client.add_cleanup("/tmp/remoteperf_delayed_*")
         client.run_command(command)
         super().__init__(
@@ -81,9 +77,7 @@ class DelegatedExecutionThread(ExceptionThread):
             self.join()
 
     @staticmethod
-    def _delayed_file_read_and_remove(
-        delay: float, filename: str, client: BaseClient, retries: int = 3
-    ) -> str:
+    def _delayed_file_read_and_remove(delay: float, filename: str, client: BaseClient, retries: int = 3) -> str:
         _retries = retries
         time.sleep(delay + 0.2)
         command = f"cat {filename}"

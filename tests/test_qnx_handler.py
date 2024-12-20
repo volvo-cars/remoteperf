@@ -2,8 +2,8 @@ import time
 
 import pytest
 
-from src.handlers.qnx_handler import MissingQnxCapabilityException, QNXHandler, QNXHandlerException
-from src.models.base import (
+from remoteperf.handlers.qnx_handler import MissingQnxCapabilityException, QNXHandler, QNXHandlerException
+from remoteperf.models.base import (
     BaseCpuSample,
     BaseCpuUsageInfo,
     BaseMemorySample,
@@ -13,8 +13,8 @@ from src.models.base import (
     SystemMemory,
     SystemUptimeInfo,
 )
-from src.models.qnx import QnxCpuUsageInfo
-from src.models.super import CpuSampleProcessInfo, MemorySampleProcessInfo, ProcessInfo, ProcessMemoryList
+from remoteperf.models.qnx import QnxCpuUsageInfo
+from remoteperf.models.super import CpuSampleProcessInfo, MemorySampleProcessInfo, ProcessInfo, ProcessMemoryList
 
 
 @pytest.fixture

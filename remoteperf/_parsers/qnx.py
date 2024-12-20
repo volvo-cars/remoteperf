@@ -6,14 +6,12 @@ from typing import Dict, Optional, Tuple
 
 import regex as re
 
-from src._parsers import generic
-from src._parsers.generic import ParsingError, ParsingInfo
-from src.models.base import Process
+from remoteperf._parsers import generic
+from remoteperf._parsers.generic import ParsingError, ParsingInfo
+from remoteperf.models.base import Process
 
 
-def parse_hogs_cpu_usage(
-    hogs_output: str, timestamp: Optional[datetime] = None
-) -> dict:
+def parse_hogs_cpu_usage(hogs_output: str, timestamp: Optional[datetime] = None) -> dict:
     """
     Parses CPU usage data from the output of the 'hogs' command and returns a summary of the CPU load and per-core load.
 
@@ -61,9 +59,7 @@ def parse_hogs_cpu_usage(
     return result
 
 
-def parse_hogs_pidin_proc_wise(
-    raw_cpu_data: str, timestamp: Optional[datetime] = None
-) -> Dict[Process, dict]:
+def parse_hogs_pidin_proc_wise(raw_cpu_data: str, timestamp: Optional[datetime] = None) -> Dict[Process, dict]:
     """
     Parses CPU usage data and process information from a concatenated string of 'hogs' and `pidin` outputs.
 
@@ -104,18 +100,13 @@ def parse_hogs_pidin_proc_wise(
     """
     timestamp = timestamp or datetime.now()
     parsed_hogs_data = parse_hogs(raw_cpu_data, ("SYS", "PID", "NAME"))
-    parsed_pidin_data = parse_pidin(
-        raw_cpu_data, ("pid", "name", "Arguments", "start_time")
-    )
+    parsed_pidin_data = parse_pidin(raw_cpu_data, ("pid", "name", "Arguments", "start_time"))
 
     result = {}
 
     for pid, process in parsed_pidin_data.items():
         hogs_process = parsed_hogs_data.get(pid)
-        if hogs_process and (
-            hogs_process["NAME"] in process["name"]
-            or hogs_process["NAME"] in process["Arguments"]
-        ):
+        if hogs_process and (hogs_process["NAME"] in process["name"] or hogs_process["NAME"] in process["Arguments"]):
             p = Process(
                 pid=process["pid"],
                 name=process["name"],
@@ -176,9 +167,7 @@ def parse_mem_usage_from_proc_files(
     """
     timestamp = timestamp or datetime.now()
 
-    parsed_pidin = parse_pidin(
-        raw_process_memory_usage, required=("pid", "name", "Arguments", "start_time")
-    )
+    parsed_pidin = parse_pidin(raw_process_memory_usage, required=("pid", "name", "Arguments", "start_time"))
     parsed_procfiles = parse_memory_per_pid(raw_process_memory_usage)
     result = {}
     for pid, process in parsed_pidin.items():
@@ -251,25 +240,14 @@ def parse_memory_per_pid(raw_data: str) -> dict:
 
 def parse_pidin(raw_pidin_data: str, required: Tuple[str]) -> dict:
     categories = {
-        "pid": ParsingInfo(r"(\d+)", int),
+        "pid": ParsingInfo(r"(\d+)", int, key=1),
         "name": ParsingInfo(r"([\w/.-]+)", lambda s: PurePosixPath(s).name),
         "sid": ParsingInfo(r"(\d+)", int),
-        "start_time": ParsingInfo(
-            r"([a-zA-Z]{3}\s+\d+\s+\d{2}:\d{2})",
-            str,
-        ),
-        "utime": ParsingInfo(
-            r"([\d.smhd]+)", generic.convert_compact_format_to_seconds
-        ),
-        "stime": ParsingInfo(
-            r"([\d.smhd]+)", generic.convert_compact_format_to_seconds
-        ),
-        "cutime": ParsingInfo(
-            r"([\d.smhd]+)", generic.convert_compact_format_to_seconds
-        ),
-        "cstime": ParsingInfo(
-            r"([\d.smhd]+)", generic.convert_compact_format_to_seconds
-        ),
+        "start time": ParsingInfo(r"([a-zA-Z]{3}\s+\d+\s+\d{2}:\d{2})", str, rename="start_time"),
+        "utime": ParsingInfo(r"([\d.smhd]+)", generic.convert_compact_format_to_seconds),
+        "stime": ParsingInfo(r"([\d.smhd]+)", generic.convert_compact_format_to_seconds),
+        "cutime": ParsingInfo(r"([\d.smhd]+)", generic.convert_compact_format_to_seconds),
+        "cstime": ParsingInfo(r"([\d.smhd]+)", generic.convert_compact_format_to_seconds),
         "Arguments": ParsingInfo(r"(.*)", lambda x: x),
     }
     return generic.parse_table(raw_pidin_data, categories, required=required)
@@ -277,7 +255,7 @@ def parse_pidin(raw_pidin_data: str, required: Tuple[str]) -> dict:
 
 def parse_hogs(raw_pidin_data: str, required: Tuple[str]) -> dict:
     categories = {
-        "PID": ParsingInfo(r"(\d+)", int),
+        "PID": ParsingInfo(r"(\d+)", int, key=1),
         "NAME": ParsingInfo(r"([\w/.-]+)", lambda s: PurePosixPath(s).name),
         "MSEC": ParsingInfo(r"(\d+)", int),
         "PIDS": ParsingInfo(r"(\d*\.?\d+)%", float),
@@ -287,9 +265,7 @@ def parse_hogs(raw_pidin_data: str, required: Tuple[str]) -> dict:
     return generic.parse_table(raw_pidin_data, categories, required=required)
 
 
-def parse_proc_vm_stat(
-    raw_memory_usage: str, timestamp: Optional[datetime] = None
-) -> dict:
+def parse_proc_vm_stat(raw_memory_usage: str, timestamp: Optional[datetime] = None) -> dict:
     """
         Parses memory usage statistics from a string and calculates total, used, and free memory.
 
@@ -361,15 +337,11 @@ def parse_bmetrics_boot_time(raw_output: str) -> dict:
         ns = int(match.group(2).replace("ns", ""))
         boot_time = seconds + (ns / (10**9))
     else:
-        raise ParsingError(
-            f"Unable to extract boot time: no match found for pattern: {pattern}"
-        )
+        raise ParsingError(f"Unable to extract boot time: no match found for pattern: {pattern}")
     return {"total": boot_time}  # type: ignore[call-arg]
 
 
-def parse_uptime(
-    boot_data: str, date_data: str, timestamp: Optional[datetime] = None
-) -> dict:
+def parse_uptime(boot_data: str, date_data: str, timestamp: Optional[datetime] = None) -> dict:
     """
     Parses boot and date information to calculate system uptime.
 
@@ -397,9 +369,7 @@ def parse_uptime(
         try:
             boot_time_str = boot_time_match.group(1) + " " + boot_time_match.group(2)
             boot_time = datetime.strptime(boot_time_str, "%b %d %H:%M:%S %Y")
-            current_time = datetime.strptime(
-                date_data.strip(), "%a %b %d %H:%M:%S %Z %Y"
-            )
+            current_time = datetime.strptime(date_data.strip(), "%a %b %d %H:%M:%S %Z %Y")
             uptime = current_time - boot_time
         except ValueError as e:
             raise ParsingError("Failed to parse datetime data from data") from e
@@ -407,3 +377,23 @@ def parse_uptime(
         raise ParsingError("Error during extracting data")
 
     return {"total": uptime.total_seconds(), "timestamp": timestamp}
+
+
+def parse_df_qnx(raw_data: str) -> dict:
+    catergories = {
+        "filesystem": ParsingInfo(r"(\S+)", str, key=1),
+        "size": ParsingInfo(r"(\d+)", int),
+        "used": ParsingInfo(r"(\d+)", int),
+        "available": ParsingInfo(r"(\d+)", int),
+        "use_percent": ParsingInfo(r"(\d+)%", int),
+        "mounted_on": ParsingInfo(r"(\S+)", str),
+    }
+
+    df_stats = generic.parse_table(
+        raw_data,
+        catergories,
+        required=("filesystem", "size", "used", "available", "used_percent", "mounted_on"),
+        header=False,
+    )
+
+    return df_stats

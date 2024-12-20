@@ -2,21 +2,32 @@ import time
 
 import pytest
 
-from src.handlers.base_linux_handler import BaseLinuxHandlerException
-from src.handlers.linux_handler import LinuxHandler, LinuxHandlerException, MissingLinuxCapabilityException
-from src.models.base import (
+from remoteperf.handlers.base_linux_handler import BaseLinuxHandlerException
+from remoteperf.handlers.linux_handler import LinuxHandler, LinuxHandlerException, MissingLinuxCapabilityException
+from remoteperf.models.base import (
     BaseCpuSample,
     BaseCpuUsageInfo,
     BaseMemorySample,
     BootTimeInfo,
+    DiskInfo,
+    DiskIOInfo,
     ExtendedMemoryInfo,
     MemoryInfo,
     ModelList,
     SystemMemory,
     SystemUptimeInfo,
 )
-from src.models.linux import LinuxCpuModeUsageInfo, LinuxCpuUsageInfo, LinuxResourceSample
-from src.models.super import MemorySampleProcessInfo, ProcessMemoryList, ResourceSampleProcessInfo
+from remoteperf.models.linux import LinuxCpuModeUsageInfo, LinuxCpuUsageInfo, LinuxResourceSample
+from remoteperf.models.super import (
+    DiskInfoList,
+    DiskIOList,
+    DiskIOProcessSample,
+    DiskIOSampleProcessInfo,
+    MemorySampleProcessInfo,
+    ProcessDiskIOList,
+    ProcessMemoryList,
+    ResourceSampleProcessInfo,
+)
 
 
 def get_time_py_pid(lst, pid):
@@ -243,3 +254,119 @@ def test_type_process(linux_handler: LinuxHandler):
 def test_missing_boot_time_exception(broken_linux_handler):
     with pytest.raises(MissingLinuxCapabilityException):
         broken_linux_handler.get_boot_time()
+
+
+desired_output_info = DiskInfoList(
+    [
+        DiskInfo(
+            filesystem="/dev/sda",
+            size=7654321,
+            used=0,
+            available=1234567,
+            used_percent=11,
+            mounted_on="/",
+        )
+    ]
+)
+
+
+def test_disc_info(linux_handler):
+    output = linux_handler.get_diskinfo()
+    assert output.model_dump(exclude="timestamp") == desired_output_info.model_dump(exclude="timestamp")
+
+
+def test_disc_info_cont(linux_handler):
+    linux_handler.start_diskinfo_measurement(0.1)
+    time.sleep(0.05)
+    output = linux_handler.stop_diskinfo_measurement()
+    assert output.model_dump(exclude="timestamp") == desired_output_info.model_dump(exclude="timestamp")
+
+
+desired_output_usage = DiskIOList(
+    [
+        DiskIOInfo(
+            device_major_number=1,
+            device_minor_number=0,
+            device_name="sda",
+            reads_completed=123,
+            reads_merged=12,
+            sectors_reads=1,
+            time_spent_reading=4,
+            writes_completed=45,
+            writes_merged=456,
+            sectors_written=7,
+            time_spent_writing=78,
+            IOs_currently_in_progress=789,
+            time_spent_doing_io=0,
+            weighted_time_spent_doing_io=321,
+            discards_completed=21,
+            discards_merged=654,
+            sectors_discarded=54,
+            time_spent_discarding=987,
+            time_spent_flushing=98,
+        )
+    ]
+)
+
+
+def test_discio(linux_handler):
+    output = linux_handler.get_diskio()
+    assert output.model_dump(exclude="timestamp") == desired_output_usage.model_dump(exclude="timestamp")
+
+
+def test_discio_cont(linux_handler):
+    linux_handler.start_diskio_measurement(0.1)
+    time.sleep(0.05)
+    output = linux_handler.stop_diskio_measurement()
+    assert output.model_dump(exclude="timestamp") == desired_output_usage.model_dump(exclude="timestamp")
+
+
+sample = DiskIOProcessSample(
+    rchar=1,
+    wchar=2,
+    syscr=3,
+    syscw=4,
+    read_bytes=5,
+    write_bytes=6,
+    cancelled_write_bytes=7,
+)
+desired_output_usage_proc_atomic = ProcessDiskIOList(
+    [
+        DiskIOSampleProcessInfo(
+            pid=846,
+            name="bash",
+            command="/bin/bash",
+            samples=[sample],
+            start_time="1715",
+        )
+    ]
+)
+
+
+def test_discio_proc(linux_handler):
+    output = linux_handler.get_diskio_proc_wise()
+    assert output.model_dump(exclude="timestamp") == desired_output_usage_proc_atomic.model_dump(exclude="timestamp")
+
+
+desired_output_usage_proc_cont = ProcessDiskIOList(
+    [
+        DiskIOSampleProcessInfo(
+            pid=846,
+            name="bash",
+            command="/bin/bash",
+            samples=[sample, sample],
+            start_time="1715",
+        )
+    ]
+)
+
+
+def test_discio_proc_cont(linux_handler):
+    linux_handler.start_diskio_measurement_proc_wise(0.1)
+    time.sleep(0.15)
+    output = linux_handler.stop_diskio_measurement_proc_wise()
+    assert output.model_dump(exclude="timestamp") == desired_output_usage_proc_cont.model_dump(exclude="timestamp")
+    assert output[0].avg_read_bytes == 5.0
+    assert output[0].avg_write_bytes == 6.0
+    assert output[0]._sum_read_bytes == 10
+    assert output[0]._sum_write_bytes == 12

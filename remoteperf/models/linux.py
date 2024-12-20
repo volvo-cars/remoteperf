@@ -5,13 +5,13 @@ from typing import Dict
 
 import attr
 
-from src.models.base import (
+from remoteperf.models.base import (
     BaseCpuSample,
     BaseCpuUsageInfo,
     BaseRemoteperfModel,
     BootTimeInfo,
 )
-from src.utils.attrs_util import attrs_init_replacement
+from remoteperf.utils.attrs_util import attrs_init_replacement
 
 
 @attrs_init_replacement

@@ -2,7 +2,7 @@ from tempfile import TemporaryDirectory
 
 import pytest
 
-from src.handlers.linux_handler import LinuxHandler
+from remoteperf.handlers.linux_handler import LinuxHandler
 
 
 @pytest.fixture

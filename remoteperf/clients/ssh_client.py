@@ -7,7 +7,7 @@ from typing import Any, Generator
 
 import paramiko
 
-from src.clients.lock_client import LockClient, LockClientException
+from remoteperf.clients.lock_client import LockClient, LockClientException
 
 
 class SSHClientException(LockClientException):
@@ -87,9 +87,7 @@ class SSHClient(LockClient):
 
     def _disconnect(self) -> None:
         if not self._client:
-            raise SSHClientException(
-                "You cannot close a connection that does not exist"
-            )
+            raise SSHClientException("You cannot close a connection that does not exist")
         try:
             self._client.close()
         finally:
@@ -106,9 +104,7 @@ class SSHClient(LockClient):
                 if isinstance(error, TimeoutError):
                     self._logger.error(f"Timeout received, retrying {attempt}.")
                 else:
-                    self._logger.error(
-                        f"Error occured, retrying {attempt}, (cause: {error})."
-                    )
+                    self._logger.error(f"Error occured, retrying {attempt}, (cause: {error}).")
             try:
                 with self._create_session() as session:
                     session.exec_command(command)
@@ -117,9 +113,7 @@ class SSHClient(LockClient):
             except Exception as e:  # Cannot guarantee paramiko errors exclusively: pylint: disable=W0718
                 error = e
                 self._recover_connection()
-        raise SSHClientException(
-            f"Timeout exceeded when reading output after {_retries+1} attempts"
-        ) from error
+        raise SSHClientException(f"Timeout exceeded when reading output after {_retries+1} attempts") from error
 
     @contextmanager
     def _create_session(self) -> Generator[paramiko.Channel, Any, Any]:
@@ -143,13 +137,9 @@ class SSHClient(LockClient):
                     or not self._transport_alive(session.get_transport())
                     or not session.active
                 ):
-                    raise SSHClientException(
-                        f"Error occured after final read. Partial output: {output}"
-                    )
+                    raise SSHClientException(f"Error occured after final read. Partial output: {output}")
                 return output
-        raise TimeoutError(
-            f"Timeout occured reading exit status. Partial output:{output}"
-        )
+        raise TimeoutError(f"Timeout occured reading exit status. Partial output:{output}")
 
     def _recv_all(self, session: paramiko.Channel) -> str:
         out = ""
@@ -166,15 +156,11 @@ class SSHClient(LockClient):
                 with self._client.open_sftp() as sftp:
                     return sftp.get(path, dest)
             except IOError as e:
-                raise SSHClientException(
-                    f"Pulled file did not match remote: {e}"
-                ) from e
+                raise SSHClientException(f"Pulled file did not match remote: {e}") from e
             except Exception as e:  # Cannot guarantee paramiko errors exclusively: pylint: disable=W0718
                 error = e
                 self._recover_connection()
-        raise SSHClientException(
-            f"Failed to pull file: ({error}) after {attempt} attempt(s)"
-        ) from error
+        raise SSHClientException(f"Failed to pull file: ({error}) after {attempt} attempt(s)") from error
 
     def _push_file(self, path: str, dest: str) -> None:
         error = None
@@ -183,15 +169,11 @@ class SSHClient(LockClient):
                 with self._client.open_sftp() as sftp:
                     return sftp.put(path, dest, confirm=True)
             except IOError as e:
-                raise SSHClientException(
-                    f"Pulled file did not match remote: {e}"
-                ) from e
+                raise SSHClientException(f"Pulled file did not match remote: {e}") from e
             except Exception as e:  # Cannot guarantee paramiko errors exclusively: pylint: disable=W0718
                 error = e
                 self._recover_connection()
-        raise SSHClientException(
-            f"Failed to pull file: ({error}) after {attempt} attempt(s)"
-        ) from error
+        raise SSHClientException(f"Failed to pull file: ({error}) after {attempt} attempt(s)") from error
 
     def _recover_connection(self) -> bool:
         if not self.connected:

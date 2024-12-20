@@ -4,15 +4,28 @@ import time
 from contextlib import contextmanager
 from typing import Dict, List, Tuple
 
-from src._parsers import linux as linux_parsers
-from src._parsers.generic import ParsingError
-from src.handlers.posix_implementation_handler import PosixHandlerException, PosixImplementationHandler
-from src.models.base import BaseMemorySample, Process, Sample, SystemMemory, SystemUptimeInfo
-from src.models.linux import LinuxCpuUsageInfo, LinuxResourceSample
-from src.models.super import (
+from remoteperf._parsers import linux as linux_parsers
+from remoteperf._parsers.generic import ParsingError
+from remoteperf.handlers.posix_implementation_handler import PosixHandlerException, PosixImplementationHandler
+from remoteperf.models.base import (
+    BaseMemorySample,
+    DiskInfo,
+    DiskIOInfo,
+    Process,
+    Sample,
+    SystemMemory,
+    SystemUptimeInfo,
+)
+from remoteperf.models.linux import LinuxCpuUsageInfo, LinuxResourceSample
+from remoteperf.models.super import (
     CpuList,
+    DiskInfoList,
+    DiskIOList,
+    DiskIOProcessSample,
+    DiskIOSampleProcessInfo,
     MemoryList,
     MemorySampleProcessInfo,
+    ProcessDiskIOList,
     ProcessMemoryList,
     ProcessResourceList,
     ResourceSampleProcessInfo,
@@ -34,7 +47,7 @@ def _handle_parsing_error(sample1, sample2=None):
         raise BaseLinuxHandlerException(f"Failed to parse data {result}") from e
 
 
-class BaseLinuxHandler(PosixImplementationHandler):
+class BaseLinuxHandler(PosixImplementationHandler):  # pylint: disable=R0904 (too-many-public-methods)
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._nonexistant_separator_file = "e39f7761903b"
@@ -81,6 +94,24 @@ class BaseLinuxHandler(PosixImplementationHandler):
         output = self._client.run_command(command)
         return SystemUptimeInfo(total=float(output))
 
+    def get_diskinfo(self) -> DiskInfoList:
+        output = linux_parsers.parse_df(self._get_df())
+        return DiskInfoList([DiskInfo(**kpis) for _, kpis in output.items()])
+
+    def get_diskio(self) -> DiskIOList:
+        output = linux_parsers.parse_proc_diskio(self._get_diskstats())
+        return DiskIOList([DiskIOInfo(**kpis) for _, kpis in output.items()])
+
+    def get_diskio_proc_wise(self) -> ProcessDiskIOList:
+        output = self._diskio_measurement_proc_wise()
+        with _handle_parsing_error(output):
+            return ProcessDiskIOList(
+                DiskIOSampleProcessInfo(**p.model_dump(), samples=[sample])
+                for p, sample in linux_parsers.parse_disk_usage_from_proc_files(
+                    output, self._nonexistant_separator_file
+                ).items()
+            )
+
     def start_cpu_measurement(self, interval: float) -> None:
         self._start_measurement(self._cpu_measurement, interval)
 
@@ -106,11 +137,46 @@ class BaseLinuxHandler(PosixImplementationHandler):
                 )
         return MemoryList(parsed_results)
 
+    def start_diskinfo_measurement(self, interval: float) -> None:
+        self._start_measurement(self._get_df, interval)
+
+    def stop_diskinfo_measurement(self) -> DiskInfoList:
+        results, _ = self._stop_measurement(self._get_df)
+        processed_results = []
+        for sample in results:
+            with _handle_parsing_error(sample.data):
+                output = linux_parsers.parse_df(sample.data)
+                for _, kpis in output.items():
+                    kpis["timestamp"] = sample.timestamp
+                    processed_results.append(DiskInfo(**kpis))
+
+        return DiskInfoList(processed_results)
+
+    def start_diskio_measurement(self, interval: float) -> None:
+        """Starts disk usage measurement"""
+        self._start_measurement(self._get_diskstats, interval)
+
+    def stop_diskio_measurement(self) -> DiskIOList:
+        """Stops disk usage measurement"""
+        results, _ = self._stop_measurement(self._get_diskstats)
+        processed_results = []
+        for sample in results:
+            with _handle_parsing_error(sample):
+                output = linux_parsers.parse_proc_diskio(sample.data)
+                for _, kpis in output.items():
+                    kpis["timestamp"] = sample.timestamp
+                    processed_results.append(DiskIOInfo(**kpis))
+
+        return DiskIOList(processed_results)
+
     def start_cpu_measurement_proc_wise(self, interval: float) -> None:
         self._start_measurement(self._cpu_measurement_proc_wise, interval, self._process_cpu_measurements)
 
     def start_mem_measurement_proc_wise(self, interval: float) -> None:
         self._start_measurement(self._mem_measurement_proc_wise, interval, self._process_mem_measurements)
+
+    def start_diskio_measurement_proc_wise(self, interval: float) -> None:
+        self._start_measurement(self._diskio_measurement_proc_wise, interval, self._process_diskio_measurements)
 
     def stop_cpu_measurement_proc_wise(self) -> ProcessResourceList:
         _, results = self._stop_measurement(self._cpu_measurement_proc_wise)
@@ -122,6 +188,13 @@ class BaseLinuxHandler(PosixImplementationHandler):
         _, results = self._stop_measurement(self._mem_measurement_proc_wise)
         output = ProcessMemoryList(
             MemorySampleProcessInfo(**p.model_dump(), samples=samples) for p, samples in results.items()
+        )
+        return output
+
+    def stop_diskio_measurement_proc_wise(self) -> ProcessDiskIOList:
+        _, results = self._stop_measurement(self._diskio_measurement_proc_wise)
+        output = ProcessDiskIOList(
+            DiskIOSampleProcessInfo(**p.model_dump(), samples=samples) for p, samples in results.items()
         )
         return output
 
@@ -150,6 +223,18 @@ class BaseLinuxHandler(PosixImplementationHandler):
                     processed_results.setdefault(p, []).append(BaseMemorySample(**sample))
         return [], processed_results
 
+    def _process_diskio_measurements(
+        self, results: List[Sample], processed_results: Dict[Process, List[tuple]]
+    ) -> Tuple[List[Sample], Dict[Process, List[tuple]]]:
+        processed_results = processed_results or {}
+        for result in results:
+            with _handle_parsing_error(result.data):
+                for p, sample in linux_parsers.parse_disk_usage_from_proc_files(
+                    result.data, self._nonexistant_separator_file, timestamp=result.timestamp
+                ).items():
+                    processed_results.setdefault(p, []).append(DiskIOProcessSample(**sample))
+        return [], processed_results
+
     def _cpu_measurement(self, **_):
         command = "cat /proc/stat | grep cpu"
         return self._client.run_command(command.strip())
@@ -162,7 +247,14 @@ class BaseLinuxHandler(PosixImplementationHandler):
             r'sed "s:\([0-9]*\):' + self._nonexistant_separator_file + r" /proc/\1/stat "
             r'/proc/\1/cmdline:") ' + self._nonexistant_separator_file + r" /proc/stat 2>&1"
         )
+        return self._client.run_command(command)
 
+    def _io_measurement_proc_wise(self, **_) -> Tuple[str, str]:
+        command = (
+            r'/bin/cat $(ls /proc | grep "[0-9]" | '
+            r'sed "s:\([0-9]*\):' + self._nonexistant_separator_file + r" /proc/\1/stat "
+            r'/proc/\1/io /proc/\1/cmdline:") ' + self._nonexistant_separator_file + r" 2>&1"
+        )
         return self._client.run_command(command)
 
     def _cpu_measurement_proc_wise(self, *args, **kwargs) -> str:
@@ -171,6 +263,17 @@ class BaseLinuxHandler(PosixImplementationHandler):
     def _mem_measurement_proc_wise(self, *args, **kwargs) -> str:
         return self._resource_measurement_proc_wise(*args, **kwargs)
 
+    def _diskio_measurement_proc_wise(self, *args, **kwargs) -> str:
+        return self._io_measurement_proc_wise(*args, **kwargs)
+
     def _mem_measurement(self, **_):
         command = "cat /proc/meminfo"
+        return self._client.run_command(command)
+
+    def _get_diskstats(self, **_):
+        command = "cat /proc/diskstats"
+        return self._client.run_command(command)
+
+    def _get_df(self, **_):
+        command = "df"
         return self._client.run_command(command)

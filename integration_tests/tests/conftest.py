@@ -7,8 +7,8 @@ from tempfile import TemporaryDirectory
 
 import pytest
 
-from src.clients.adb_client import ADBClient
-from src.clients.ssh_client import SSHClient
+from remoteperf.clients.adb_client import ADBClient
+from remoteperf.clients.ssh_client import SSHClient
 
 
 def singleton(cls):
