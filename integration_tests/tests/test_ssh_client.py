@@ -16,7 +16,7 @@ from remoteperf.models.base import (
     SystemMemory,
     SystemUptimeInfo,
 )
-from remoteperf.models.linux import LinuxCpuUsageInfo, LinuxResourceSample
+from remoteperf.models.linux import LinuxCpuUsageInfo, LinuxPressureInfo, LinuxResourceSample
 from remoteperf.models.super import DiskInfoList, DiskIOList, ProcessDiskIOList, ProcessInfo
 
 
@@ -355,3 +355,20 @@ def test_diskio_proc_wise(ssh_client):
     assert output
     assert isinstance(output, ProcessDiskIOList)
     assert all((isinstance(model, ProcessInfo) for model in output))
+
+
+def test_ssh_get_pressure(ssh_client):
+    handler = LinuxHandler(ssh_client)
+    output = handler.get_pressure()
+    assert output
+    assert isinstance(output, LinuxPressureInfo)
+
+
+def test_ssh_continuous_get_pressure(ssh_client):
+    handler = LinuxHandler(ssh_client)
+    handler.start_pressure_measurement(interval=0.1)
+    time.sleep(1)
+    output = handler.stop_pressure_measurement()
+    assert output
+    assert output.cpu.full[0]
+    assert all((isinstance(model, LinuxPressureInfo) for model in output))

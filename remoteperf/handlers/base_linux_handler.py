@@ -19,7 +19,7 @@ from remoteperf.models.base import (
     SystemMemory,
     SystemUptimeInfo,
 )
-from remoteperf.models.linux import LinuxCpuUsageInfo, LinuxResourceSample
+from remoteperf.models.linux import LinuxCpuUsageInfo, LinuxPressureInfo, LinuxPressureInfoList, LinuxResourceSample
 from remoteperf.models.super import (
     CpuList,
     DiskInfoList,
@@ -109,6 +109,13 @@ class BaseLinuxHandler(PosixImplementationHandler):  # pylint: disable=R0904 (to
         output = self._client.run_command(command)
         return SystemUptimeInfo(total=float(output))
 
+    def get_pressure(self) -> LinuxPressureInfo:
+        result = linux_parsers.parse_pressure(
+            self._pressure_measurement(), ("cpu", "io", "memory"), self._nonexistant_separator_file
+        )
+        print(result)
+        return LinuxPressureInfo(**result)
+
     def get_diskinfo(self) -> DiskInfoList:
         output = linux_parsers.parse_df(self._get_df())
         return DiskInfoList([DiskInfo(**kpis) for _, kpis in output.items()])
@@ -154,6 +161,20 @@ class BaseLinuxHandler(PosixImplementationHandler):  # pylint: disable=R0904 (to
                     SystemMemory(**linux_parsers.parse_proc_meminfo(sample.data, timestamp=sample.timestamp))
                 )
         return MemoryList(parsed_results)
+
+    def start_pressure_measurement(self, interval: float) -> None:
+        self._start_measurement(self._pressure_measurement, interval)
+
+    def stop_pressure_measurement(self) -> LinuxPressureInfoList:
+        result, _ = self._stop_measurement(self._pressure_measurement)
+        parsed_result = [
+            LinuxPressureInfo(
+                **linux_parsers.parse_pressure(sample.data, ("cpu", "io", "memory"), self._nonexistant_separator_file)
+            )
+            for sample in result
+        ]
+
+        return LinuxPressureInfoList(parsed_result)
 
     def start_diskinfo_measurement(self, interval: float) -> None:
         self._start_measurement(self._get_df, interval)
@@ -318,3 +339,11 @@ class BaseLinuxHandler(PosixImplementationHandler):  # pylint: disable=R0904 (to
     def _net_measurement(self, **_) -> dict:
         command = "cat /proc/net/dev && date --iso-8601=ns"
         return linux_parsers.parse_proc_net_dev(self._client.run_command(command))
+
+    def _pressure_measurement(self, **_):
+        command = (
+            f"cat /proc/pressure/cpu {self._nonexistant_separator_file} "
+            f"/proc/pressure/io {self._nonexistant_separator_file} "
+            f"/proc/pressure/memory 2>&1"
+        )
+        return self._client.run_command(command)

@@ -352,3 +352,27 @@ def parse_net_deltadata(net_sample: dict) -> List[LinuxNetworkInterfaceDeltaSamp
         )
 
     return list_of_interfaces
+
+
+def parse_pressure(raw_data: str, types: Tuple[str], separator: str, timestamp=None) -> dict:
+    if timestamp is None:
+        timestamp = datetime.now()
+    result = {}
+    for metric, split_data in zip((types), raw_data.split(separator)):
+        presssure_pattern = r"(\w+)\s+avg10=(\d+.\d+)\s+avg60=(\d+.\d+)\s+avg300=(\d+.\d+)\s+total=(\d+)"
+        parameters = ["name", "avg10", "avg60", "avg300", "total"]
+
+        matches = re.findall(presssure_pattern, split_data)
+        if not len(matches) == 2:
+            raise ParsingError(f"Could not parse {metric} pressure data from: {raw_data}")
+        result[metric] = {}
+        for match in matches:
+            named_result = dict(zip(parameters, match))
+            name = named_result.pop("name", None)
+            result[metric][name] = named_result
+            result[metric][name]["timestamp"] = timestamp
+
+    if not result:
+        raise ParsingError(f"Could not parse pressure data from: {raw_data}")
+
+    return result

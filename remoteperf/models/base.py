@@ -254,8 +254,8 @@ class BaseNetworkTranceiveDeltaSample(BasePacketData):
 @attrs_init_replacement
 @attr.s(auto_attribs=True, kw_only=True)
 class BaseNetworkInterfaceDeltaSampleList(BaseNetworkInterfaceSample):
-    receive: List[BasePacketData]
-    transmit: List[BasePacketData]
+    receive: List[BaseNetworkInterfaceDeltaSample]
+    transmit: List[BaseNetworkInterfaceDeltaSample]
 
     @property
     def transceive(self) -> List[BaseNetworkTranceiveDeltaSample]:
