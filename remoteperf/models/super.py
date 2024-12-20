@@ -5,17 +5,19 @@ from typing import List, TypeVar
 
 import attr
 
-from src.models.base import (
+from remoteperf.models.base import (
     ArithmeticBaseInfoModel,
     BaseCpuSample,
     BaseCpuUsageInfo,
     BaseMemorySample,
     BaseProcess,
+    DiskIOInfo,
+    DiskIOProcessSample,
     ModelList,
     SystemMemory,
 )
-from src.models.linux import LinuxResourceSample
-from src.utils.attrs_util import attrs_init_replacement
+from remoteperf.models.linux import LinuxResourceSample
+from remoteperf.utils.attrs_util import attrs_init_replacement
 
 # Superstructure models that can't reside in base due to circular imports
 
@@ -114,6 +116,28 @@ class MemorySampleProcessInfo(ProcessInfo):
 
 @attrs_init_replacement
 @attr.s(auto_attribs=True, kw_only=True)
+class DiskIOSampleProcessInfo(ProcessInfo):
+    samples: List[DiskIOProcessSample]
+
+    @property
+    def avg_read_bytes(self):
+        return self._sum_read_bytes / len(self.samples)
+
+    @property
+    def avg_write_bytes(self):
+        return self._sum_write_bytes / len(self.samples)
+
+    @property
+    def _sum_read_bytes(self):
+        return sum(model.read_bytes for model in self.samples)
+
+    @property
+    def _sum_write_bytes(self):
+        return sum(model.write_bytes for model in self.samples)
+
+
+@attrs_init_replacement
+@attr.s(auto_attribs=True, kw_only=True)
 class ResourceSampleProcessInfo(CpuSampleProcessInfo, MemorySampleProcessInfo):
     samples: List[LinuxResourceSample]
 
@@ -171,6 +195,46 @@ class _ProcessMemoryList:
         return self.__class__(sorted(self, key=lambda m: m.max_mem_usage.mem_usage, reverse=True)[:n])
 
 
+class _ProcessDiskIOList:
+    def highest_average_read_bytes(self, n: int = 5):
+        """
+        Returns the top `n` processes with the highest average read bytes.
+
+        Args:
+            n (int, optional): The number of processes to return. Defaults to 5.
+
+        Returns:
+            ProcessDiskIOList: A new instance of ProcessDiskIOList containing the top `n` processes.
+        """
+        return self.__class__(sorted(self, key=lambda m: m.avg_read_bytes, reverse=True)[:n])
+
+    def highest_average_write_bytes(self, n: int = 5):
+        """
+        Returns the top `n` processes with the highest average write bytes.
+
+        Args:
+            n (int, optional): The number of processes to return. Defaults to 5.
+
+        Returns:
+            ProcessDiskIOList: A new instance of ProcessDiskIOList containing the top `n` processes.
+        """
+        return self.__class__(sorted(self, key=lambda m: m.avg_write_bytes, reverse=True)[:n])
+
+
+class _DiskList:
+    def get_disk(self, disk: str):
+        """
+        Returns a new instance with only the disk specified.
+
+        Args:
+            disk (str): The disk to filter by.
+
+        Returns:
+            DiskList: A new instance of DiskList containing only the specified disk.
+        """
+        return self.__class__(filter(lambda m: m.disk == disk, self))
+
+
 class ProcessCpuList(ModelList[CpuSampleProcessInfo], _ProcessCpuList):
     pass
 
@@ -180,4 +244,16 @@ class ProcessMemoryList(ModelList[MemorySampleProcessInfo], _ProcessMemoryList):
 
 
 class ProcessResourceList(ModelList[ResourceSampleProcessInfo], _ProcessCpuList, _ProcessMemoryList):
+    pass
+
+
+class ProcessDiskIOList(ModelList[DiskIOSampleProcessInfo], _ProcessDiskIOList):
+    pass
+
+
+class DiskIOList(ModelList[DiskIOInfo], _DiskList):
+    pass
+
+
+class DiskInfoList(ModelList[DiskIOInfo], _DiskList):
     pass

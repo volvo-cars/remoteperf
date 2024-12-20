@@ -3,7 +3,7 @@ from unittest.mock import patch
 import pytest
 from paramiko import AuthenticationException, SSHException
 
-from src.clients.ssh_client import SSHClient, SSHClientException
+from remoteperf.clients.ssh_client import SSHClient, SSHClientException
 
 
 @pytest.fixture

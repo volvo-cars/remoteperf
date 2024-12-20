@@ -8,11 +8,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
 
-from src.clients.base_client import BaseClient
-from src.handlers.base_handler import BaseHandler, BaseHandlerException
-from src.models.base import Sample
-from src.utils.fs_utils import RemoteFs
-from src.utils.threading import ExceptionThread
+from remoteperf.clients.base_client import BaseClient
+from remoteperf.handlers.base_handler import BaseHandler, BaseHandlerException
+from remoteperf.models.base import Sample
+from remoteperf.utils.fs_utils import RemoteFs
+from remoteperf.utils.threading import ExceptionThread
 
 
 class PosixHandlerException(BaseHandlerException):

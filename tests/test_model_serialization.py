@@ -1,10 +1,8 @@
 import json
-from datetime import datetime
 
-import pytest
 import yaml
 
-from src.models.base import (
+from remoteperf.models.base import (
     BaseCpuSample,
     BaseMemorySample,
     BootTimeInfo,
@@ -13,9 +11,9 @@ from src.models.base import (
     SystemMemory,
     SystemUptimeInfo,
 )
-from src.models.linux import LinuxBootTimeInfo, LinuxCpuModeUsageInfo, LinuxCpuUsageInfo, LinuxResourceSample
-from src.models.qnx import QnxCpuUsageInfo
-from src.models.super import CpuSampleProcessInfo, MemorySampleProcessInfo, ResourceSampleProcessInfo
+from remoteperf.models.linux import LinuxBootTimeInfo, LinuxCpuModeUsageInfo, LinuxCpuUsageInfo, LinuxResourceSample
+from remoteperf.models.qnx import QnxCpuUsageInfo
+from remoteperf.models.super import CpuSampleProcessInfo, MemorySampleProcessInfo, ResourceSampleProcessInfo
 
 
 def reserialize_yaml(object: dict):

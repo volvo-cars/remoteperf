@@ -8,15 +8,15 @@ Remoteperf is not a mathematical library nor does it intend to be, so for more c
 large scale computations we advice you to export data first and and do them in a more suitable
 environment. However, it does support a few basic operations on all objects returned by
 all continuous measurement functions, and if you feel some might be missing you're more than
-welcome to contribute by extending the existing list wrappers in  ``src/models/super.py``.
+welcome to contribute by extending the existing list wrappers in  ``remoteperf/models/super.py``.
 
 Example 1: Highest average load/usage
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: python
 
-    from src.clients import ADBClient
-    from src.handlers import AndroidHandler
+    from remoteperf.clients import ADBClient
+    from remoteperf.handlers import AndroidHandler
 
     with ADBClient(device_id="emulator-5554") as instance:
         handler = AndroidHandler(instance)
@@ -75,8 +75,8 @@ Example 2: Highest average priocess-wise load/usage
 
 .. code-block:: python
 
-    from src.clients import ADBClient
-    from src.handlers import AndroidHandler
+    from remoteperf.clients import ADBClient
+    from remoteperf.handlers import AndroidHandler
 
     with ADBClient(device_id="emulator-5554") as instance:
         handler = AndroidHandler(instance)
@@ -240,8 +240,8 @@ Sorting, filtering, and querying can be combined in an advanced manner as such:
 
 .. code-block:: python
 
-    from src.clients import ADBClient
-    from src.handlers import AndroidHandler
+    from remoteperf.clients import ADBClient
+    from remoteperf.handlers import AndroidHandler
 
     with ADBClient(device_id="emulator-5554") as instance:
         handler = AndroidHandler(instance)

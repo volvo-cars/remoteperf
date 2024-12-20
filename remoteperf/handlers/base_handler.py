@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 from abc import ABC, abstractmethod
 
-from src.models.base import BaseCpuUsageInfo, BootTimeInfo, SystemMemory, SystemUptimeInfo
-from src.models.super import CpuList, MemoryList, ProcessCpuList, ProcessMemoryList
+from remoteperf.models.base import BaseCpuUsageInfo, BootTimeInfo, SystemMemory, SystemUptimeInfo
+from remoteperf.models.super import CpuList, DiskInfoList, MemoryList, ProcessCpuList, ProcessMemoryList
 
 
 class BaseHandlerException(Exception):
@@ -235,4 +235,52 @@ class BaseHandler(ABC):
 
         .. seealso::
             :meth:`start_mem_measurement_proc_wise` - Method to start the memory measurement thread.
+        """
+
+    @abstractmethod
+    def get_diskinfo(self) -> DiskInfoList:
+        """
+        Retrieves information about the disks. Storage used and available space.
+
+        :return: An object containing information about the disk.
+        :rtype: DiskInfoList
+        """
+
+    @abstractmethod
+    def start_diskinfo_measurement(self, interval: float) -> None:
+        """
+        Starts a new thread which takes disk information at specified intervals.
+
+        :param interval: The time interval, in seconds, between successive disk information.
+                        The interval must be a positive number.
+        :type interval: float
+
+        :raises PosixHandlerException: If a disk information thread is already running.
+
+        :example:
+            To start collecting disk information every 2 seconds::
+
+                handler.start_diskinfo_measurement(2.0)
+
+        .. note::
+            The collected information are stored internally and can be retrieved
+            by calling :meth:`stop_diskinfo_measurement`, which stops the measurement thread
+            and returns the collected data.
+
+        .. seealso::
+            :meth:`stop_diskinfo_measurement` - Method to stop the disk information thread.
+        """
+
+    @abstractmethod
+    def stop_diskinfo_measurement(self) -> DiskInfoList:
+        """
+        Stops an existing disk information thread and returns the results.
+
+        :return: A list of disk information results.
+        :rtype: DiskInfo
+
+        :raises PosixHandlerException: If a disk information thread is not running.
+
+        .. seealso::
+            :meth:`start_diskinfo_measurement` - Method to start the disk information thread.
         """

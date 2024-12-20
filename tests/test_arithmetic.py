@@ -1,9 +1,9 @@
 import textwrap
 import time
 
-from src.handlers.linux_handler import LinuxHandler
-from src.models.base import ExtendedMemoryInfo, MemoryInfo, SystemMemory
-from src.models.linux import LinuxCpuUsageInfo
+from remoteperf.handlers.linux_handler import LinuxHandler
+from remoteperf.models.base import ExtendedMemoryInfo, MemoryInfo, SystemMemory
+from remoteperf.models.linux import LinuxCpuUsageInfo
 
 
 def test_avg_cpu(linux_handler: LinuxHandler):

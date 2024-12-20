@@ -5,20 +5,19 @@ import time
 import pytest
 from conftest import override_client_config
 
-from src.clients.base_client import BaseClientException
-from src.clients.ssh_client import SSHClient, SSHClientException
-from src.handlers.linux_handler import LinuxHandler
-from src.models.base import (
+from remoteperf.clients.base_client import BaseClientException
+from remoteperf.clients.ssh_client import SSHClient, SSHClientException
+from remoteperf.handlers.linux_handler import LinuxHandler
+from remoteperf.models.base import (
     BaseCpuSample,
     BaseCpuUsageInfo,
     BaseMemorySample,
     BootTimeInfo,
-    Command,
     SystemMemory,
     SystemUptimeInfo,
 )
-from src.models.linux import LinuxCpuUsageInfo, LinuxResourceSample
-from src.models.super import ProcessInfo
+from remoteperf.models.linux import LinuxCpuUsageInfo, LinuxResourceSample
+from remoteperf.models.super import DiskInfoList, DiskIOList, ProcessDiskIOList, ProcessInfo
 
 
 def close_transport(client: SSHClient):
@@ -217,13 +216,13 @@ def test_ssh_pull_directory(ssh_client):
 
 
 def test_ssh_pull_dir(ssh_client):
-    path = f"/tmp"
+    path = "/tmp"
     with pytest.raises(BaseClientException):
         ssh_client.pull_file("/usr/bin", path)
 
 
 def test_ssh_pull_imaginary_dir(ssh_client):
-    path = f"/sdfgsdf/sfgdh"
+    path = "/sdfgsdf/sfgdh"
     with pytest.raises(BaseClientException):
         ssh_client.pull_file("/usr/bin/xz", path)
 
@@ -334,3 +333,25 @@ def test_ssh_client_retry(ssh_client):
         with pytest.raises(SSHClientException):
             client.run_command("sleep 1.5")
         assert time.time() - t0 > 3 and time.time() - t0 < 7
+
+
+def test_diskinfo(ssh_client):
+    handler = LinuxHandler(ssh_client)
+    output = handler.get_diskinfo()
+    assert output
+    assert isinstance(output, DiskInfoList)
+
+
+def test_diskio(ssh_client):
+    handler = LinuxHandler(ssh_client)
+    output = handler.get_diskio()
+    assert output
+    assert isinstance(output, DiskIOList)
+
+
+def test_diskio_proc_wise(ssh_client):
+    handler = LinuxHandler(ssh_client)
+    output = handler.get_diskio_proc_wise()
+    assert output
+    assert isinstance(output, ProcessDiskIOList)
+    assert all((isinstance(model, ProcessInfo) for model in output))

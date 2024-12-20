@@ -5,32 +5,34 @@ from typing import Dict, List, Tuple
 
 from more_itertools import partition
 
-from src._parsers import qnx as qnx_parsers
-from src._parsers.generic import ParsingError
-from src.handlers.posix_implementation_handler import (
+from remoteperf._parsers import qnx as qnx_parsers
+from remoteperf._parsers.generic import ParsingError
+from remoteperf.handlers.posix_implementation_handler import (
     MissingPosixCapabilityException,
     PosixHandlerException,
     PosixImplementationHandler,
 )
-from src.models.base import (
+from remoteperf.models.base import (
     BaseCpuSample,
     BaseMemorySample,
     BootTimeInfo,
+    DiskInfo,
     Process,
     Sample,
     SystemMemory,
     SystemUptimeInfo,
 )
-from src.models.qnx import QnxCpuUsageInfo
-from src.models.super import (
+from remoteperf.models.qnx import QnxCpuUsageInfo
+from remoteperf.models.super import (
     CpuList,
     CpuSampleProcessInfo,
+    DiskInfoList,
     MemoryList,
     MemorySampleProcessInfo,
     ProcessCpuList,
     ProcessMemoryList,
 )
-from src.utils.threading import DelegatedExecutionThread
+from remoteperf.utils.threading import DelegatedExecutionThread
 
 
 class QNXHandlerException(PosixHandlerException):
@@ -73,6 +75,10 @@ class QNXHandler(PosixImplementationHandler):
         with _handle_parsing_error(result):
             return SystemMemory(**qnx_parsers.parse_proc_vm_stat(result))
 
+    def get_diskinfo(self) -> DiskInfoList:
+        output = qnx_parsers.parse_df_qnx(self._get_df())
+        return DiskInfoList([DiskInfo(**kpis) for _, kpis in output.items()])
+
     def get_mem_usage_proc_wise(self, **_) -> ProcessMemoryList:
         """
         Get process-wise memory usage
@@ -87,11 +93,25 @@ class QNXHandler(PosixImplementationHandler):
             )
 
     def get_system_uptime(self) -> SystemUptimeInfo:
-
         pidin = self._client.run_command("pidin info")
         date_data = self._client.run_command("date")
         with _handle_parsing_error(f"pidin: ({pidin}) date: ({date_data})"):
             return SystemUptimeInfo(**qnx_parsers.parse_uptime(pidin, date_data))
+
+    def start_diskinfo_measurement(self, interval: float) -> None:
+        self._start_measurement(self._get_df, interval)
+
+    def stop_diskinfo_measurement(self) -> DiskInfoList:
+        results, _ = self._stop_measurement(self._get_df)
+        processed_results = []
+        for sample in results:
+            with _handle_parsing_error(sample.data):
+                output = qnx_parsers.parse_df_qnx(sample.data)
+                for _, kpis in output.items():
+                    kpis["timestamp"] = sample.timestamp
+                    processed_results.append(DiskInfo(**kpis))
+
+        return DiskInfoList(processed_results)
 
     def get_boot_time(self) -> BootTimeInfo:
         """
@@ -222,3 +242,7 @@ class QNXHandler(PosixImplementationHandler):
                 ).items():
                     processed_results.setdefault(p, []).append(BaseMemorySample(**sample))
         return [], processed_results
+
+    def _get_df(self, **_):
+        command = "df"
+        return self._client.run_command(command)

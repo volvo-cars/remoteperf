@@ -2,11 +2,11 @@
 # SPDX-License-Identifier: Apache-2.0
 from contextlib import contextmanager
 
-from src._parsers import linux as linux_parsers
-from src._parsers.generic import ParsingError
-from src.handlers.base_linux_handler import BaseLinuxHandler, BaseLinuxHandlerException
-from src.handlers.posix_implementation_handler import MissingPosixCapabilityException
-from src.models.linux import LinuxBootTimeInfo
+from remoteperf._parsers import linux as linux_parsers
+from remoteperf._parsers.generic import ParsingError
+from remoteperf.handlers.base_linux_handler import BaseLinuxHandler, BaseLinuxHandlerException
+from remoteperf.handlers.posix_implementation_handler import MissingPosixCapabilityException
+from remoteperf.models.linux import LinuxBootTimeInfo
 
 
 class LinuxHandlerException(BaseLinuxHandlerException):

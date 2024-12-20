@@ -1,4 +1,4 @@
-from src.handlers.linux_handler import LinuxHandler
+from remoteperf.handlers.linux_handler import LinuxHandler
 
 
 def test_remove_file(ssh_client, random_name):

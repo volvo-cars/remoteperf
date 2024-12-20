@@ -6,10 +6,10 @@ from typing import Any, Dict, Optional, Tuple
 
 from attrs import fields
 
-from src._parsers.generic import ParsingError
-from src.models.base import Process
-from src.models.linux import LinuxCpuModeUsageInfo
-from src.utils.math import Vector
+from remoteperf._parsers.generic import ParsingError, ParsingInfo, parse_table
+from remoteperf.models.base import Process
+from remoteperf.models.linux import LinuxCpuModeUsageInfo
+from remoteperf.utils.math import Vector
 
 
 def parse_proc_stat(raw_cpu_usage_1: str, raw_cpu_usage_2: str, timestamp: Optional[datetime] = None) -> dict:
@@ -159,6 +159,16 @@ def parse_mem_usage_from_proc_files(
     return result
 
 
+def parse_disk_usage_from_proc_files(
+    raw_process_disk_usage: str, separator_pattern: str, timestamp: Optional[datetime] = None
+) -> Dict[Process, dict]:
+    timestamp = timestamp or datetime.now()
+    raw_stat_list = raw_process_disk_usage.split(f"/bin/cat: {separator_pattern}")[1:]
+    if not raw_stat_list:
+        raise ParsingError(f"Could not separate processes (delimiter:{separator_pattern}): {raw_process_disk_usage}")
+    return parse_io_from_proc_files(raw_stat_list)
+
+
 def parse_times_from_proc_files(proc_metrics, page_size) -> Dict[Process, int]:
     proc_times = {}
     regex_components = [r"(?P<pid>\d+)", r"\((?P<name>\S+)\)", r"\S", *([r"(-?\d+)"] * 49)]
@@ -172,6 +182,26 @@ def parse_times_from_proc_files(proc_metrics, page_size) -> Dict[Process, int]:
                 command=match.group("cmdline") or match.group("name"),
             )
             proc_times[proc] = (int(match.group(13)) + int(match.group(14)), int(page_size) * int(match.group(23)))
+    return proc_times
+
+
+def parse_io_from_proc_files(proc_metrics) -> Dict[Process, int]:
+    proc_times = {}
+    regex_components = [r"(?P<pid>\d+)", r"\((?P<name>\S+)\)", r"\S", *([r"(-?\d+)"] * 49)]
+    io_regex = r"".join([r"\n(\w+:\s+\d+)"] * 7)
+    proc_regex = r"\s+".join(regex_components) + io_regex + r"\n(?P<cmdline>.*)"
+
+    for proc in proc_metrics:
+        if match := re.search(proc_regex, proc):
+            proc = Process(
+                pid=int(match.group("pid")),
+                name=match.group("name"),
+                start_time=match.group(21),
+                command=match.group("cmdline") or match.group("name"),
+            )
+            proc_times[proc] = {
+                str(match.group(i).split(": ")[0]): int(match.group(i).split(": ")[1]) for i in range(52, 59)
+            }
     return proc_times
 
 
@@ -207,3 +237,43 @@ def parse_systemd_analyze(analyze_string: str) -> dict:
         results["extra"]["graphical.target"] = float(target_time.group(1))
 
     return results
+
+
+def parse_proc_diskio(raw_data: str) -> dict:
+    categories = {
+        "device_major_number": ParsingInfo(r"(\d+)", int),
+        "device_minor_number": ParsingInfo(r"(\d+)", int),
+        "device_name": ParsingInfo(r"(\w+)", str, key=1),
+        "reads_completed": ParsingInfo(r"(\d+)", int),
+        "reads_merged": ParsingInfo(r"(\d+)", int),
+        "sectors_reads": ParsingInfo(r"(\d+)", int),
+        "time_spent_reading": ParsingInfo(r"(\d+)", int),
+        "writes_completed": ParsingInfo(r"(\d+)", int),
+        "writes_merged": ParsingInfo(r"(\d+)", int),
+        "sectors_written": ParsingInfo(r"(\d+)", int),
+        "time_spent_writing": ParsingInfo(r"(\d+)", int),
+        "IOs_currently_in_progress": ParsingInfo(r"(\d+)", int),
+        "time_spent_doing_io": ParsingInfo(r"(\d+)", int),
+        "weighted_time_spent_doing_io": ParsingInfo(r"(\d+)", int),
+        "discards_completed": ParsingInfo(r"(\d+)", int),
+        "discards_merged": ParsingInfo(r"(\d+)", int),
+        "sectors_discarded": ParsingInfo(r"(\d+)", int),
+        "time_spent_discarding": ParsingInfo(r"(\d+)", int),
+        "flushes_completed": ParsingInfo(r"(\d+)", int),
+        "time_spent_flushing": ParsingInfo(r"(\d+)", int),
+    }
+    return parse_table(raw_data, categories, header=False)
+
+
+def parse_df(raw_data: str) -> dict:
+    catergories = {
+        "Filesystem": ParsingInfo(r"(\S+)", str, key=1, rename="filesystem"),
+        "1K-blocks": ParsingInfo(r"(\d+)", int, rename="size"),
+        "Used": ParsingInfo(r"(\d+)", int, rename="used"),
+        "Available": ParsingInfo(r"(\d+)", int, rename="available"),
+        "Use%": ParsingInfo(r"(\d+)%", int, rename="used_percent"),
+        "Mounted on": ParsingInfo(r"(\S+)", str, rename="mounted_on"),
+    }
+    return parse_table(
+        raw_data, catergories, required=("filesystem", "size", "used", "available", "used_percent", "mounted_on")
+    )

@@ -14,8 +14,8 @@ To check wheteher a file exists, the following functions can be used:
 
 .. code-block:: python
 
-    from src.clients import SSHClient
-    from src.handlers import QNXHandler
+    from remoteperf.clients import SSHClient
+    from remoteperf.handlers import QNXHandler
 
     with SSHClient("127.0.0.1", port=22, username="root", password="root") as instance:
         handler = QNXHandler(instance, log_path="/tmp/core")
@@ -30,8 +30,8 @@ In addition, it also allows for removal of files and directory:
 
 .. code-block:: python
 
-    from src.clients import SSHClient
-    from src.utils.fs_utils import RemoteFS
+    from remoteperf.clients import SSHClient
+    from remoteperf.utils.fs_utils import RemoteFS
 
     with SSHClient("127.0.0.1", port=22, username="root", password="root") as instance:
         fs = RemoteFS(instance)
@@ -47,8 +47,8 @@ There is also support for remote temporary directories:
 
 .. code-block:: python
 
-    from src.clients import SSHClient
-    from src.handlers import LinuxHandler
+    from remoteperf.clients import SSHClient
+    from remoteperf.handlers import LinuxHandler
 
     with SSHClient("127.0.0.1", port=22, username="root", password="root") as instance:
         handler = LinuxHandler(instance)

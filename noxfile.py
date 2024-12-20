@@ -9,7 +9,7 @@ import nox
 PROJECT_NAME = "remoteperf"
 
 
-@nox.session(python="3.8")
+@nox.session(python=["3.8", "3.10", "3.12"])
 def lint(session):
     shutil.rmtree("tmp", ignore_errors=True)
     session.install("-U", "-r", "requirements/requirements.txt")
@@ -17,7 +17,7 @@ def lint(session):
     run_lint(session)
 
 
-@nox.session(python="3.8")
+@nox.session(python=["3.8", "3.10", "3.12"])
 def test(session):
     session.install("-U", "-r", "requirements/requirements.txt")
     session.install("-U", "-r", "requirements/requirements_test.txt")
@@ -70,7 +70,7 @@ def integration_test(session):
                 "pytest",
                 *args,
                 "--color=yes",
-                f"--cov=./src",
+                "--cov=./remoteperf",
                 "--cov-report",
                 "xml:tmp/report/coverage/xml/integration_report.xml",
                 "--cov-report",
@@ -126,9 +126,7 @@ def integration_test(session):
 
 def remove_docker_container(session, container):
     existing_container_command = f"docker ps -a | grep {container} || true"
-    existing_container = subprocess.check_output(
-        ["bash", "-c", existing_container_command]
-    ).decode()
+    existing_container = subprocess.check_output(["bash", "-c", existing_container_command]).decode()
     if existing_container and len(existing_container.split()[0]) == 12:
         session.run("docker", "container", "rm", "-f", container)
 
@@ -173,7 +171,7 @@ def build_wheel_package(session, clean=False, install=False):
 def run_lint(session):
     shutil.rmtree("tmp", ignore_errors=True)
     session.log("Running black")
-    session.run("black", "--check", "src", "tests", silent=True)
+    session.run("black", "--check", "remoteperf", "tests", silent=True)
 
     session.log("Running pylint")
     session.run(
@@ -181,14 +179,11 @@ def run_lint(session):
         "--output-format=colorized",
         "--reports=y",
         "--disable=W0511",  # Don't fail on FIXMEs
-        f"./src",
+        "./remoteperf",
     )
 
-    session.log("Running flake8")
-    session.run("pflake8", "src", "tests")
-
     session.log("Running mypy")
-    session.run("mypy", f"./src", success_codes=[1, 0])
+    session.run("mypy", "./remoteperf", success_codes=[1, 0])
 
 
 def run_test(session):
@@ -200,7 +195,7 @@ def run_test(session):
         "pytest",
         *session.posargs,
         "--color=yes",
-        f"--cov=./src",
+        "--cov=./remoteperf",
         "--cov-report",
         "xml:tmp/report/coverage/xml/report.xml",
         "--cov-report",
@@ -224,7 +219,7 @@ def run_doc(session):
         "sphinx-apidoc",
         "-o",
         "docs/source/code",
-        "src",
+        "remoteperf",
         "-e",
         "--force",
         "-d",

@@ -1,0 +1,30 @@
+
+#!/bin/bash
+nicinfo_output='eq0:\n
+   Ethernet Controller\n
+\n
+  Physical Node ID ........................... 000000 000000\n
+  Current Physical Node ID ................... 000001 000001\n
+  Current Operation Rate ..................... 2.50 Mb/s full-duplex\n
+  Active Interface Type ...................... SMI\n
+    Active PHY address ....................... 0\n
+  Maximum Transmittable data Unit ............ 0\n
+  Maximum Receivable data Unit ............... 0\n
+  Promiscuous Mode ........................... Off\n
+  Multicast Support .......................... Enabled\n
+\n
+  Packets Transmitted OK ..................... 9225590\n
+  Bytes Transmitted OK ....................... 1366702382\n
+  Broadcast Packets Transmitted OK ........... 19\n
+  Multicast Packets Transmitted OK ........... 8671\n
+\n
+  Packets Received OK ........................ 10786584\n
+  Bytes Received OK .......................... 1198846300\n
+  Broadcast Packets Received OK .............. 7634\n
+  Multicast Packets Received OK .............. 80894\n
+\n
+  Received packets with CRC errors ........... 0\n
+  Short packets .............................. 0\n
+\n
+vlan0:'
+echo -e $nicinfo_output

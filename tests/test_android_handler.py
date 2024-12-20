@@ -1,6 +1,10 @@
 import pytest
 
-from src.handlers.android_handler import AndroidHandler, AndroidHandlerException, MissingAndroidCapabilityException
+from remoteperf.handlers.android_handler import (
+    AndroidHandler,
+    AndroidHandlerException,
+    MissingAndroidCapabilityException,
+)
 
 
 @pytest.fixture

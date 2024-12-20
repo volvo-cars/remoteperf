@@ -20,16 +20,16 @@ include-package-data = true
 remoteperf = ["**"]
 
 [tool.setuptools.packages.find]
-include = ["src*"]
+include = ["remoteperf*"]
 exclude = ["docs*", "tests*"]
 namespaces = false
 
 [tool.setuptools.dynamic]
-version = { attr = "src.__version__" }
+version = { attr = "remoteperf.__version__" }
 dependencies = { file = ["requirements/requirements.txt"] }
 
 [tool.flake8]
-per-file-ignores = "tests/*.py:F401,F811,E302,W504,W503,N818 src/*.py:E203"
+per-file-ignores = "tests/*.py:F401,F811,E302,W504,W503,N818 remoteperf/*.py:E203"
 max-line-length = 120
 max-complexity = 12
 
