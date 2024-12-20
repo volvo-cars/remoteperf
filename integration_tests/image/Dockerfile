@@ -98,6 +98,8 @@ RUN chmod +x /usr/local/bin/healthcheck.sh
 #============================================
 COPY mocks/systemd-analyze /usr/bin/systemd-analyze
 RUN chmod +x /usr/bin/systemd-analyze
+COPY mocks/nicinfo /usr/bin/nicinfo
+RUN chmod +x /usr/bin/nicinfo
 
 #============================================
 # Setup ssh server

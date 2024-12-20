@@ -1,5 +1,7 @@
 # Copyright 2024 Volvo Cars
 # SPDX-License-Identifier: Apache-2.0
+
+
 class Vector(tuple):
     def __new__(cls, iterable=()):
         values = map(float, iterable)

@@ -265,7 +265,6 @@ Example result (for a docker container running only sshd):
 
 Example 7: Disk Info and IO:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 .. code-block:: python
 
     from remoteperf.clients import SSHClient
@@ -293,3 +292,37 @@ All these measures can also be pulled continuously.
     handler.start_diskio_measurement_proc_wise(0.1)
     time.sleep(1)
     result = handler.stop_diskio_measurement_proc_wise()
+
+
+Example 8: Network Usage Measurements, both individual and continuous:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Network measurements are setup similar to other KPIs. They can be pulled as a single measurement or continuously.
+For a single measurement, the following code can be used:
+
+ .. code-block:: python
+
+    from remoteperf.clients import SSHClient
+    from remoteperf.handlers import LinuxHandler
+
+    with SSHClient("127.0.0.1", port=22, username="root", password="root") as client:
+        handler = LinuxHandler(client)
+        current_network_usage = handler.get_network_usage()
+        total_network_usage = handler.get_network_usage_total()
+
+The result is then a list of handler-specific network information models. Current network usage is the current usage of the network interfaces, while total network usage is the total usage since the last reboot.
+
+The following is showing a continuous measurement:
+
+.. code-block:: python
+
+    from remoteperf.clients import SSHClient
+    from remoteperf.handlers import LinuxHandler
+
+    with SSHClient("127.0.0.1", port=22, username="root", password="root") as client:
+        handler = LinuxHandler(client)
+        handler.start_net_interface_measurement(0.1)
+        time.sleep(1)
+        result = handler.stop_net_interface_measurement()
+
+The result is then a list of handler-specific network information models. It is the same as the single measurement, except that it is a list of measurement.

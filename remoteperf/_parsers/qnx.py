@@ -9,6 +9,12 @@ import regex as re
 from remoteperf._parsers import generic
 from remoteperf._parsers.generic import ParsingError, ParsingInfo
 from remoteperf.models.base import Process
+from remoteperf.models.qnx import (
+    QnxNetworkInterfaceDeltaSamples,
+    QnxNetworkInterfaceSample,
+    QnxNetworkPacketDeltaSample,
+    QnxPacketData,
+)
 
 
 def parse_hogs_cpu_usage(hogs_output: str, timestamp: Optional[datetime] = None) -> dict:
@@ -385,7 +391,7 @@ def parse_df_qnx(raw_data: str) -> dict:
         "size": ParsingInfo(r"(\d+)", int),
         "used": ParsingInfo(r"(\d+)", int),
         "available": ParsingInfo(r"(\d+)", int),
-        "use_percent": ParsingInfo(r"(\d+)%", int),
+        "used_percent": ParsingInfo(r"(\d+)%", int),
         "mounted_on": ParsingInfo(r"(\S+)", str),
     }
 
@@ -397,3 +403,101 @@ def parse_df_qnx(raw_data: str) -> dict:
     )
 
     return df_stats
+
+
+def parse_nicinfo(nicinfo_output: str) -> dict:
+    interfaces = {}
+    receive_names = {
+        "kibibytes": "Bytes Received OK",
+        "packets": "Packets Received OK",
+        "broadcast": "Broadcast Packets Received OK",
+        "multicast": "Multicast Packets Received OK",
+    }
+    transmit_names = {
+        "kibibytes": "Bytes Transmitted OK",
+        "packets": "Packets Transmitted OK",
+        "broadcast": "Broadcast Packets Transmitted OK",
+        "multicast": "Multicast Packets Transmitted OK",
+    }
+
+    try:
+        nicinfo_interface_list = re.split(r"\n(?=[a-zA-Z]+)", nicinfo_output.strip())
+
+        # QNX does not provide timestamps via console in the precision we need (only seconds available via date).
+        # Therefore we switch to the timestamp of the host system.
+        # Which should be fine as we only consider it for time differences.
+        sampletime = datetime.now()
+
+        for nicinfo_interface in nicinfo_interface_list:
+            nicinfo_interface_output = nicinfo_interface.strip().split("\n")
+            interface_name = nicinfo_interface_output[0].strip(": ")
+
+            if nicinfo_interface_output[1:]:
+                interface_values = parse_nicinfo_interface(nicinfo_interface_output[1:], receive_names, transmit_names)
+                interfaces[interface_name] = {
+                    "receive": dict(
+                        zip(receive_names.keys(), [interface_values[name] for name in receive_names.values()])
+                    ),
+                    "transmit": dict(
+                        zip(transmit_names.keys(), [interface_values[name] for name in transmit_names.values()])
+                    ),
+                }
+                # Add sampletime and sampletimestamp to the dictionary
+                interfaces[interface_name]["receive"]["sampletimediff"] = sampletime
+                interfaces[interface_name]["transmit"]["sampletimediff"] = sampletime
+
+    except Exception as e:
+        raise ParsingError(f"Error when parsing nicinfo output: {nicinfo_output}") from e
+
+    return interfaces
+
+
+def parse_nicinfo_interface(nicinfo_output: str, receive_names, transmit_names) -> dict:
+    nicinfo_values = {}
+    for line in nicinfo_output:
+        if not line or "Ethernet Controller" in line:
+            continue
+        name_value_split = re.split(r"\s+\.+\s+", line)
+        if len(name_value_split) == 2 and name_value_split[0].strip() in set(receive_names.values()) | set(
+            transmit_names.values()
+        ):
+            name, value = name_value_split
+            nicinfo_values[name.strip()] = int(value.strip())
+
+    # Convert bytes to kibibytes
+    nicinfo_values[receive_names["kibibytes"]] = nicinfo_values.get(receive_names["kibibytes"]) / 1024
+    nicinfo_values[transmit_names["kibibytes"]] = nicinfo_values.get(transmit_names["kibibytes"]) / 1024
+
+    return nicinfo_values
+
+
+def parse_net_data(net_sample: dict) -> QnxNetworkInterfaceSample:
+    list_of_interfaces = []
+
+    for interface, data in net_sample.items():
+        data["receive"].pop("sampletimediff")
+        data["transmit"].pop("sampletimediff")
+        list_of_interfaces.append(
+            QnxNetworkInterfaceSample(
+                name=interface,
+                receive=QnxPacketData(**data["receive"]),
+                transmit=QnxPacketData(**data["transmit"]),
+            )
+        )
+
+    return list_of_interfaces
+
+
+def parse_net_deltadata(net_sample: dict) -> QnxNetworkInterfaceDeltaSamples:
+    list_of_interfaces = []
+
+    for interface, data in net_sample.items():
+        list_of_interfaces.append(
+            QnxNetworkInterfaceDeltaSamples(
+                name=interface,
+                receive=[QnxNetworkPacketDeltaSample(**data["receive"])],
+                transmit=[QnxNetworkPacketDeltaSample(**data["transmit"])],
+            )
+        )
+
+    return list_of_interfaces

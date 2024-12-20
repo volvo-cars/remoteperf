@@ -8,6 +8,7 @@ from typing import (
     Dict,
     Generic,
     Iterable,
+    List,
     Optional,
     Set,
     TypeVar,
@@ -169,6 +170,156 @@ class ExtendedMemoryInfo(MemoryInfo):
     available: int
 
 
+# The network data class structure is as follows:
+# PacketData: Describes what is in a network traffic measurement.
+# InterfaceSample: Describes the network interface which consists of PacketData for its different traffic types.
+# DeltaSample: Describes the difference between two InterfaceSamples. It inherits from PacketData
+#              and add the time difference.
+# DeltaSampleList: Describes an observation duration of network traffic. It consists of a list of DeltaSamples.
+# For each of these packets there are derivatives for various operating systems,
+# which have additional fields specific to the various OSes. These are decorated with the names of the OSes in front.
+@attrs_init_replacement
+@attr.s(auto_attribs=True, kw_only=True)
+class BasePacketData(BaseInfoModel):
+    kibibytes: float
+    packets: int
+
+
+@attrs_init_replacement
+@attr.s(auto_attribs=True, kw_only=True)
+class BaseLinuxPacketData(BasePacketData):
+    errs: int
+    drop: int
+    fifo: int
+    compressed: int
+
+
+@attrs_init_replacement
+@attr.s(auto_attribs=True, kw_only=True)
+class LinuxReceivePacketData(BaseLinuxPacketData):
+    frame: int
+    multicast: int
+
+
+@attrs_init_replacement
+@attr.s(auto_attribs=True, kw_only=True)
+class LinuxTransmitPacketData(BaseLinuxPacketData):
+    colls: int
+    carrier: int
+
+
+@attrs_init_replacement
+@attr.s(auto_attribs=True, kw_only=True)
+class BaseNetworkInterfaceSample(BaseInfoModel):
+    name: str
+    receive: BasePacketData
+    transmit: BasePacketData
+
+
+@attrs_init_replacement
+@attr.s(auto_attribs=True, kw_only=True)
+class LinuxNetworkInterfaceSample(BaseNetworkInterfaceSample):
+    receive: LinuxReceivePacketData
+    transmit: LinuxTransmitPacketData
+
+
+@attrs_init_replacement
+@attr.s(auto_attribs=True, kw_only=True)
+class BaseNetworkInterfaceDeltaSample(BasePacketData):
+    sampletimediff: float
+
+    @property
+    def rate(self):
+        return self.kibibytes / self.sampletimediff
+
+
+@attrs_init_replacement
+@attr.s(auto_attribs=True, kw_only=True)
+class LinuxNetworkReceiveDeltaSample(BaseNetworkInterfaceDeltaSample, LinuxReceivePacketData):
+    pass
+
+
+@attrs_init_replacement
+@attr.s(auto_attribs=True, kw_only=True)
+class LinuxNetworkTransmitDeltaSample(BaseNetworkInterfaceDeltaSample, LinuxTransmitPacketData):
+    pass
+
+
+@attrs_init_replacement
+@attr.s(auto_attribs=True, kw_only=True)
+class BaseNetworkTranceiveDeltaSample(BasePacketData):
+    rate: float
+
+
+@attrs_init_replacement
+@attr.s(auto_attribs=True, kw_only=True)
+class BaseNetworkInterfaceDeltaSampleList(BaseNetworkInterfaceSample):
+    receive: List[BasePacketData]
+    transmit: List[BasePacketData]
+
+    @property
+    def transceive(self) -> List[BaseNetworkTranceiveDeltaSample]:
+        "Transceive data represents the sum of both transmit and receive data"
+        transceive_list = [
+            BaseNetworkTranceiveDeltaSample(
+                kibibytes=receive.kibibytes + transmit.kibibytes,
+                packets=receive.packets + transmit.packets,
+                rate=receive.rate + transmit.rate,
+            )
+            for receive, transmit in zip(self.receive, self.transmit)
+        ]
+        return transceive_list
+
+    @property
+    def avg_receive_rate(self) -> float:
+        return sum(receive.rate for receive in self.receive) / len(self.receive)
+
+    @property
+    def avg_transmit_rate(self) -> float:
+        return sum(transmit.rate for transmit in self.transmit) / len(self.transmit)
+
+    @property
+    def avg_transceive_rate(self) -> float:
+        return sum(transceive.rate for transceive in self.transceive) / len(self.transceive)
+
+    def receive_exceeding_threshold(self, threshold: int) -> List[LinuxReceivePacketData]:
+        """
+        Returns a list of timestamps at which point receive network traffic exceeded the given threshold.
+
+        :param int threshold: The threshold to check against.
+        :return: A list of measurements, where threshold was exceeded.
+        :rtype: list[LinuxReceivePacketData]
+        """
+        return [receive for receive in self.receive if receive.rate >= threshold]
+
+    def transmit_exceeding_threshold(self, threshold: int) -> List[LinuxTransmitPacketData]:
+        """
+        Returns a list of timestamps at which point transmit network traffic exceeded the given threshold.
+
+        :param int threshold: The threshold to check against.
+        :return: A list of measurements, where threshold was exceeded.
+        :rtype: list[LinuxTransmitPacketData]
+        """
+        return [transmit for transmit in self.transmit if transmit.rate >= threshold]
+
+    def transceive_exceeding_threshold(self, threshold: int) -> List[BasePacketData]:
+        """
+        Returns a list of timestamps at which point transceive network traffic exceeded the given threshold.
+
+        :param int threshold: The threshold to check against.
+        :return: A list of measurements, where threshold was exceeded.
+        :rtype: list[BasePacketData]
+        """
+        return [transceive for transceive in self.transceive if transceive.rate >= threshold]
+
+
+@attrs_init_replacement
+@attr.s(auto_attribs=True, kw_only=True)
+class LinuxNetworkInterfaceDeltaSampleList(BaseNetworkInterfaceDeltaSampleList):
+    receive: List[LinuxNetworkReceiveDeltaSample]
+    transmit: List[LinuxNetworkTransmitDeltaSample]
+
+
 @attrs_init_replacement
 @attr.s(auto_attribs=True, kw_only=True)
 class DiskInfo(BaseInfoModel):
@@ -218,6 +369,19 @@ class BaseProcess(BaseRemoteperfModel):
 class Process(BaseProcess):
     def __hash__(self):
         return hash((self.pid, self.name, self.command, self.start_time))
+
+
+@attrs_init_replacement
+@attr.s(auto_attribs=True, kw_only=True)
+class BaseInterface(BaseRemoteperfModel):
+    name: str
+
+
+@attrs_init_replacement
+@attr.s(auto_attribs=True, kw_only=True, hash=False)
+class Interface(BaseInterface):
+    def __hash__(self):
+        return hash((self.name))
 
 
 @attrs_init_replacement
